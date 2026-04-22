@@ -39,6 +39,10 @@ export function createApp(container: AwilixContainer<Cradle>) {
       swaggerOptions: {
         persistAuthorization: true,
         tryItOutEnabled: true,
+        displayRequestDuration: true,
+        docExpansion: "list",
+        tagsSorter: "alpha",
+        operationsSorter: "alpha",
       },
     }),
   );

@@ -1,10 +1,13 @@
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { Readable } from "node:stream";
 import { env } from "../config/env.js";
 
 export class S3StorageService {
@@ -65,5 +68,30 @@ export class S3StorageService {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
     );
+  }
+
+  /**
+   * Tạo presigned URL để client tải file trực tiếp từ S3/MinIO (không qua backend).
+   * @param key     - S3 object key
+   * @param expiresIn - Thời gian hiệu lực tính bằng giây (mặc định 15 phút)
+   */
+  async getPresignedUrl(key: string, expiresIn = 900): Promise<string> {
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    return getSignedUrl(this.client, command, { expiresIn });
+  }
+
+  /** Trả về body stream + contentType để streaming tới client. */
+  async getObject(
+    key: string,
+  ): Promise<{ body: Readable; contentType: string; contentLength?: number }> {
+    const resp = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!resp.Body) throw new Error("S3 object không có body");
+    return {
+      body: resp.Body as Readable,
+      contentType: resp.ContentType ?? "application/octet-stream",
+      contentLength: resp.ContentLength,
+    };
   }
 }

@@ -3,13 +3,33 @@ import type { AwilixContainer } from "awilix";
 import type { Cradle } from "../../di/types.js";
 import { healthRoutes } from "./health.routes.js";
 import { userRoutes } from "./user.routes.js";
+import { authRoutes } from "./auth.routes.js";
+import { documentRoutes } from "./document.routes.js";
+import { categoryRoutes } from "./category.routes.js";
+import { courseRoutes } from "./course.routes.js";
+import { noteRoutes } from "./note.routes.js";
 
 export function registerRoutes(container: AwilixContainer<Cradle>): Router {
   const api = Router();
-  const { healthController, userController } = container.cradle;
+  const {
+    healthController,
+    userController,
+    authController,
+    authMiddleware,
+    documentController,
+    noteController,
+    aiController,
+    categoryController,
+    courseController,
+  } = container.cradle;
 
   api.use("/health", healthRoutes(healthController));
-  api.use("/users", userRoutes(userController));
+  api.use("/auth", authRoutes(authController, authMiddleware));
+  api.use("/users", userRoutes(userController, authMiddleware));
+  api.use("/documents", documentRoutes(documentController, noteController, aiController, authMiddleware));
+  api.use("/categories", categoryRoutes(categoryController, authMiddleware));
+  api.use("/courses", courseRoutes(courseController, authMiddleware));
+  api.use("/notes", noteRoutes(noteController, authMiddleware));
 
   return api;
 }

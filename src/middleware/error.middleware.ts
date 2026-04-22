@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { env } from "../config/env.js";
+import { sendFail } from "../utils/response.js";
 
 export function errorMiddleware(
   err: unknown,
@@ -15,6 +16,6 @@ export function errorMiddleware(
     console.error(message);
   }
   if (!res.headersSent) {
-    res.status(500).json({ message });
+    sendFail(res, 500, message);
   }
 }
