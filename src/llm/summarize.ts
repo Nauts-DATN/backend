@@ -50,7 +50,7 @@ export async function summarizePdf(
         },
       ],
     });
-
+    console.log("promptTokenCount", response.usageMetadata?.promptTokenCount);
     const text = response.text?.trim() ?? "";
     if (!text) {
       throw Object.assign(

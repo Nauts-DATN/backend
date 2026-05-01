@@ -41,5 +41,8 @@ export function documentRoutes(
   /** Tóm tắt nội dung tài liệu bằng AI. */
   r.post("/:id/summarize", auth.authenticate, aiController.summarizeDocument);
 
+  /** Tạo bộ câu hỏi từ tài liệu bằng AI. */
+  r.post("/:id/quiz", auth.authenticate, aiController.generateQuiz);
+
   return r;
 }

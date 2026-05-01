@@ -1,6 +1,12 @@
 import { Readable } from "node:stream";
 import { env } from "../config/env.js";
 import { summarizePdf } from "../llm/summarize.js";
+import {
+  generateQuizFromPdf,
+  type GenerateQuizOptions,
+  type QuestionType,
+  type QuizQuestion,
+} from "../llm/quiz.js";
 import type { DocumentRepository } from "../repositories/document.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
 
@@ -22,6 +28,13 @@ export type SummaryResult = {
   summary: string;
   documentId: string;
   documentTitle: string;
+};
+
+export type QuizResult = {
+  documentId: string;
+  documentTitle: string;
+  questionType: QuestionType;
+  questions: QuizQuestion[];
 };
 
 export class AiService {
@@ -70,6 +83,50 @@ export class AiService {
       summary,
       documentId: doc._id.toString(),
       documentTitle: doc.title,
+    };
+  }
+
+  async generateQuiz(
+    documentId: string,
+    requesterId: string,
+    requesterRole: string,
+    options: GenerateQuizOptions,
+  ): Promise<QuizResult> {
+    if (!env.geminiApiKey) {
+      throw makeErr("GEMINI_API_KEY chưa được cấu hình trên server.", 503);
+    }
+
+    const doc = await this.documentRepository.findById(documentId);
+    if (!doc) throw makeErr("Không tìm thấy document", 404);
+    if (
+      requesterRole !== "admin" &&
+      doc.uploadedBy.toString() !== requesterId
+    ) {
+      throw makeErr("Không có quyền", 403);
+    }
+
+    if (doc.mimeType !== "application/pdf") {
+      throw makeErr(
+        `Chỉ hỗ trợ tạo quiz từ file PDF. File này có định dạng: ${doc.mimeType}`,
+        422,
+      );
+    }
+
+    const { body } = await this.s3Storage.getObject(doc.fileKey);
+    const buffer = await streamToBuffer(body);
+
+    const questions = await generateQuizFromPdf(
+      buffer,
+      doc.fileName,
+      options,
+      env.geminiApiKey,
+    );
+
+    return {
+      documentId: doc._id.toString(),
+      documentTitle: doc.title,
+      questionType: options.questionType,
+      questions,
     };
   }
 }

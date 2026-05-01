@@ -983,6 +983,78 @@ export const openApiSpec = {
       },
     },
 
+    "/documents/{id}/quiz": {
+      post: {
+        tags: ["ai", "documents"],
+        summary: "Tạo bộ câu hỏi từ tài liệu bằng AI",
+        description: `Tải file PDF từ S3, upload lên **Gemini Files API**, gọi \`gemini-2.5-flash-lite\` để tạo bộ câu hỏi kiểm tra theo loại được yêu cầu.
+
+- **multiple_choice** — câu hỏi trắc nghiệm, 4 lựa chọn, 1 đáp án đúng.
+- **essay** — câu hỏi tự luận, kèm gợi ý trả lời mẫu.
+
+> **Lưu ý:** Chỉ hỗ trợ file **PDF**. Nếu server chưa cấu hình \`GEMINI_API_KEY\` sẽ trả 503.
+> File được xóa khỏi Gemini ngay sau khi tạo quiz xong.`,
+        operationId: "generateQuiz",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "MongoDB ObjectId của document",
+            schema: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/QuizBody" },
+              example: { questionType: "multiple_choice", count: 5 },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Tạo quiz thành công",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/QuizData" }),
+                example: {
+                  status: 200,
+                  error: null,
+                  isSuccess: true,
+                  data: {
+                    documentId: "674a1b2c3d4e5f6789abcdef",
+                    documentTitle: "Giáo trình Giải tích",
+                    questionType: "multiple_choice",
+                    questions: [
+                      {
+                        id: "q1",
+                        type: "multiple_choice",
+                        text: "Giới hạn của hàm số f(x) = x² khi x → 2 là bao nhiêu?",
+                        options: ["2", "4", "8", "16"],
+                        answer: 1,
+                        explanation: "f(2) = 2² = 4",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "questionType không hợp lệ", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền truy cập document", content: errContent() },
+          "404": { description: "Không tìm thấy document", content: errContent() },
+          "422": { description: "File không phải PDF", content: errContent() },
+          "502": { description: "Gemini trả về lỗi hoặc nội dung rỗng", content: errContent() },
+          "503": { description: "GEMINI_API_KEY chưa được cấu hình", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
     "/documents/{id}/note": {
       get: {
         tags: ["notes", "documents"],
@@ -1576,6 +1648,103 @@ export const openApiSpec = {
               "Bản tóm tắt tiếng Việt có cấu trúc: ## Tổng quan, ## Nội dung chính, ## Từ khóa",
             example:
               "## Tổng quan\nTài liệu trình bày...\n\n## Nội dung chính\n- ...\n\n## Từ khóa\n...",
+          },
+        },
+      },
+
+      QuizBody: {
+        type: "object",
+        properties: {
+          questionType: {
+            type: "string",
+            enum: ["multiple_choice", "essay"],
+            default: "multiple_choice",
+            description: "Loại câu hỏi: trắc nghiệm hoặc tự luận",
+          },
+          count: {
+            type: "integer",
+            minimum: 1,
+            maximum: 20,
+            default: 5,
+            description: "Số câu hỏi cần tạo (mặc định 5, tối đa 20)",
+          },
+        },
+      },
+
+      QuizQuestion: {
+        type: "object",
+        description: "Một câu hỏi trong bộ quiz",
+        required: ["id", "type", "text"],
+        properties: {
+          id: {
+            type: "string",
+            description: 'ID câu hỏi, dạng "q1", "q2", …',
+            example: "q1",
+          },
+          type: {
+            type: "string",
+            enum: ["multiple_choice", "essay"],
+            description: "Loại câu hỏi",
+          },
+          text: {
+            type: "string",
+            description: "Nội dung câu hỏi",
+            example: "Giới hạn của hàm số f(x) = x² khi x → 2 là bao nhiêu?",
+          },
+          options: {
+            type: "array",
+            items: { type: "string" },
+            minItems: 4,
+            maxItems: 4,
+            description: "4 lựa chọn (chỉ có với multiple_choice)",
+            example: ["2", "4", "8", "16"],
+            nullable: true,
+          },
+          answer: {
+            type: "integer",
+            minimum: 0,
+            maximum: 3,
+            description: "Index đáp án đúng 0–3 (chỉ có với multiple_choice)",
+            example: 1,
+            nullable: true,
+          },
+          explanation: {
+            type: "string",
+            description: "Giải thích đáp án ngắn gọn (tuỳ chọn)",
+            example: "f(2) = 2² = 4",
+            nullable: true,
+          },
+          sampleAnswer: {
+            type: "string",
+            description: "Gợi ý trả lời mẫu (chỉ có với essay)",
+            example: "Đạo hàm là giới hạn của tỉ số gia số...",
+            nullable: true,
+          },
+        },
+      },
+
+      QuizData: {
+        type: "object",
+        properties: {
+          documentId: {
+            type: "string",
+            description: "ObjectId của document",
+            example: "674a1b2c3d4e5f6789abcdef",
+          },
+          documentTitle: {
+            type: "string",
+            description: "Tiêu đề document",
+            example: "Giáo trình Giải tích",
+          },
+          questionType: {
+            type: "string",
+            enum: ["multiple_choice", "essay"],
+            description: "Loại câu hỏi đã yêu cầu",
+          },
+          questions: {
+            type: "array",
+            items: { $ref: "#/components/schemas/QuizQuestion" },
+            description: "Danh sách câu hỏi",
           },
         },
       },
