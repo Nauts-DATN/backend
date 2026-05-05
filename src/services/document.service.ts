@@ -23,6 +23,10 @@ export type PublicDocument = {
   /** Presigned URL tạm thời để tải file trực tiếp từ S3 (hết hạn sau `presignedExpiresIn` giây). */
   presignedUrl: string;
   presignedExpiresIn: number;
+  /** Bản tóm tắt AI (null nếu chưa tóm tắt). */
+  summary: string | null;
+  /** Thời điểm tóm tắt lần cuối (null nếu chưa tóm tắt). */
+  summarizedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -77,6 +81,8 @@ export class DocumentService {
       downloadUrl: `${this.s3Storage.getPublicBaseUrl()}/${doc.fileKey}`,
       presignedUrl,
       presignedExpiresIn: expiresIn,
+      summary: doc.summary ?? null,
+      summarizedAt: doc.summarizedAt?.toISOString() ?? null,
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
     };

@@ -4,6 +4,7 @@ import { S3StorageService } from "../storage/s3-storage.service.js";
 import { UserRepository } from "../repositories/user.repository.js";
 import { DocumentRepository } from "../repositories/document.repository.js";
 import { NoteRepository } from "../repositories/note.repository.js";
+import { QuizRepository } from "../repositories/quiz.repository.js";
 import { CategoryRepository } from "../repositories/category.repository.js";
 import { CourseRepository } from "../repositories/course.repository.js";
 import { JwtService } from "../services/jwt.service.js";
@@ -37,6 +38,7 @@ export function createAppContainer() {
     userRepository: asClass(UserRepository).singleton(),
     documentRepository: asClass(DocumentRepository).singleton(),
     noteRepository: asClass(NoteRepository).singleton(),
+    quizRepository: asClass(QuizRepository).singleton(),
     categoryRepository: asClass(CategoryRepository).singleton(),
     courseRepository: asClass(CourseRepository).singleton(),
     jwtService: asClass(JwtService).singleton(),

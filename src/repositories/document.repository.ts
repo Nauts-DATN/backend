@@ -66,6 +66,18 @@ export class DocumentRepository {
     return docs as unknown as DocumentDoc[];
   }
 
+  /** Lưu bản tóm tắt AI vào document. */
+  async setSummary(id: string, summary: string): Promise<DocumentDoc | null> {
+    const doc = await DocumentModel.findByIdAndUpdate(
+      id,
+      { summary, summarizedAt: new Date() },
+      { new: true },
+    )
+      .lean()
+      .exec();
+    return doc as DocumentDoc | null;
+  }
+
   async deleteById(id: string): Promise<boolean> {
     const r = await DocumentModel.findByIdAndDelete(id).exec();
     return !!r;

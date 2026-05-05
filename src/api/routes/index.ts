@@ -8,6 +8,7 @@ import { documentRoutes } from "./document.routes.js";
 import { categoryRoutes } from "./category.routes.js";
 import { courseRoutes } from "./course.routes.js";
 import { noteRoutes } from "./note.routes.js";
+import { quizRoutes } from "./quiz.routes.js";
 
 export function registerRoutes(container: AwilixContainer<Cradle>): Router {
   const api = Router();
@@ -30,6 +31,7 @@ export function registerRoutes(container: AwilixContainer<Cradle>): Router {
   api.use("/categories", categoryRoutes(categoryController, authMiddleware));
   api.use("/courses", courseRoutes(courseController, authMiddleware));
   api.use("/notes", noteRoutes(noteController, authMiddleware));
+  api.use("/quizzes", quizRoutes(aiController, authMiddleware));
 
   return api;
 }

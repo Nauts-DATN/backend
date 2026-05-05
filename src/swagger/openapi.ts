@@ -929,18 +929,55 @@ export const openApiSpec = {
         },
       },
     },
+    "/documents/{id}/summary": {
+      get: {
+        tags: ["ai", "documents"],
+        summary: "Lấy bản tóm tắt AI đã lưu",
+        description:
+          "Trả về bản tóm tắt đã được lưu trong database. **Không gọi lại AI.** Trả 404 nếu document chưa được tóm tắt lần nào.",
+        operationId: "getCachedSummary",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "MongoDB ObjectId của document",
+            schema: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Trả về bản tóm tắt đã lưu",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/SummaryData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền truy cập document", content: errContent() },
+          "404": {
+            description: "Document không tồn tại hoặc chưa được tóm tắt",
+            content: errContent(),
+          },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
     "/documents/{id}/summarize": {
       post: {
         tags: ["ai", "documents"],
         summary: "Tóm tắt tài liệu bằng AI",
-        description: `Tải file PDF từ S3, upload lên **Gemini Files API**, gọi \`gemini-2.5-flash\` để đọc toàn bộ nội dung và trả về bản tóm tắt tiếng Việt có cấu trúc:
+        description: `Tải file PDF từ S3, upload lên **Gemini Files API**, gọi \`gemini-2.5-flash\` để đọc toàn bộ nội dung, trả về bản tóm tắt tiếng Việt có cấu trúc và **lưu vào database**:
 
 - **Tổng quan** — 2–3 câu mô tả chủ đề và mục đích tài liệu.
 - **Nội dung chính** — 5–8 ý chính dạng bullet points.
 - **Từ khóa** — danh sách từ khóa quan trọng.
 
 > **Lưu ý:** Chỉ hỗ trợ file **PDF**. Nếu server chưa cấu hình \`GEMINI_API_KEY\` sẽ trả 503.
-> File được xóa khỏi Gemini ngay sau khi tóm tắt xong.`,
+> File được xóa khỏi Gemini ngay sau khi tóm tắt xong. Dùng \`GET /summary\` để lấy lại bản đã lưu mà không tốn quota.`,
         operationId: "summarizeDocument",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1050,6 +1087,134 @@ export const openApiSpec = {
           "422": { description: "File không phải PDF", content: errContent() },
           "502": { description: "Gemini trả về lỗi hoặc nội dung rỗng", content: errContent() },
           "503": { description: "GEMINI_API_KEY chưa được cấu hình", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/documents/{id}/quizzes": {
+      get: {
+        tags: ["ai", "documents"],
+        summary: "Danh sách quiz của document",
+        description: "Trả tất cả quiz đã tạo cho document, sắp xếp theo `createdAt` giảm dần. Chỉ **owner** hoặc **admin**.",
+        operationId: "listQuizzesByDocument",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "MongoDB ObjectId của document",
+            schema: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK — mảng quiz (rỗng nếu chưa có)",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/QuizListData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy document", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/quizzes": {
+      get: {
+        tags: ["ai"],
+        summary: "Danh sách tất cả quiz của tôi",
+        description:
+          "Trả về tất cả quiz mà người dùng hiện tại đã tạo, sắp xếp theo `createdAt` giảm dần. **Admin** thấy quiz của mọi người dùng.",
+        operationId: "listMyQuizzes",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/QuizListData" }),
+                example: {
+                  status: 200,
+                  error: null,
+                  isSuccess: true,
+                  data: {
+                    quizzes: [
+                      {
+                        id: "674a000000000000000000ee",
+                        documentId: "674a1b2c3d4e5f6789abcdef",
+                        createdBy: "674a000000000000000000aa",
+                        questionType: "multiple_choice",
+                        questions: [],
+                        createdAt: "2026-05-01T08:30:00.000Z",
+                        updatedAt: "2026-05-01T08:30:00.000Z",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/quizzes/{id}": {
+      get: {
+        tags: ["ai"],
+        summary: "Lấy chi tiết một quiz",
+        operationId: "getQuizById",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "MongoDB ObjectId của quiz",
+            schema: { type: "string", example: "674a000000000000000000ee" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/QuizPublicData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy quiz", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+      delete: {
+        tags: ["ai"],
+        summary: "Xóa một quiz",
+        operationId: "deleteQuiz",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "MongoDB ObjectId của quiz",
+            schema: { type: "string", example: "674a000000000000000000ee" },
+          },
+        ],
+        responses: {
+          "200": { description: "Xóa thành công" },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy quiz", content: errContent() },
           "500": { $ref: "#/components/responses/InternalError" },
         },
       },
@@ -1597,6 +1762,19 @@ export const openApiSpec = {
             description: "Thời gian hiệu lực của presignedUrl (giây)",
             example: 900,
           },
+          summary: {
+            type: "string",
+            nullable: true,
+            description: "Bản tóm tắt AI (null nếu chưa tóm tắt)",
+            example: "## Tổng quan\n...",
+          },
+          summarizedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "Thời điểm tóm tắt lần cuối (null nếu chưa tóm tắt)",
+            example: "2026-05-01T08:30:00.000Z",
+          },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
@@ -1648,6 +1826,12 @@ export const openApiSpec = {
               "Bản tóm tắt tiếng Việt có cấu trúc: ## Tổng quan, ## Nội dung chính, ## Từ khóa",
             example:
               "## Tổng quan\nTài liệu trình bày...\n\n## Nội dung chính\n- ...\n\n## Từ khóa\n...",
+          },
+          summarizedAt: {
+            type: "string",
+            format: "date-time",
+            description: "Thời điểm tóm tắt (ISO 8601)",
+            example: "2026-05-01T08:30:00.000Z",
           },
         },
       },
@@ -1723,19 +1907,51 @@ export const openApiSpec = {
         },
       },
 
+      QuizPublic: {
+        type: "object",
+        description: "Quiz đã lưu trong database",
+        properties: {
+          id: { type: "string", example: "674a000000000000000000ee" },
+          documentId: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
+          createdBy: { type: "string", example: "674a000000000000000000aa" },
+          questionType: {
+            type: "string",
+            enum: ["multiple_choice", "essay"],
+          },
+          questions: {
+            type: "array",
+            items: { $ref: "#/components/schemas/QuizQuestion" },
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+
+      QuizPublicData: {
+        type: "object",
+        properties: {
+          quiz: { $ref: "#/components/schemas/QuizPublic" },
+        },
+      },
+
+      QuizListData: {
+        type: "object",
+        properties: {
+          quizzes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/QuizPublic" },
+          },
+        },
+      },
+
+      /** Trả về từ POST /documents/:id/quiz — có thêm documentTitle */
       QuizData: {
         type: "object",
         properties: {
-          documentId: {
-            type: "string",
-            description: "ObjectId của document",
-            example: "674a1b2c3d4e5f6789abcdef",
-          },
-          documentTitle: {
-            type: "string",
-            description: "Tiêu đề document",
-            example: "Giáo trình Giải tích",
-          },
+          id: { type: "string", example: "674a000000000000000000ee" },
+          documentId: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
+          documentTitle: { type: "string", example: "Giáo trình Giải tích" },
+          createdBy: { type: "string", example: "674a000000000000000000aa" },
           questionType: {
             type: "string",
             enum: ["multiple_choice", "essay"],
@@ -1746,6 +1962,8 @@ export const openApiSpec = {
             items: { $ref: "#/components/schemas/QuizQuestion" },
             description: "Danh sách câu hỏi",
           },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
         },
       },
 

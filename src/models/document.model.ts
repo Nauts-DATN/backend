@@ -10,6 +10,10 @@ export interface IDocument {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  /** Bản tóm tắt AI — lưu sau khi gọi POST /summarize. */
+  summary?: string;
+  /** Thời điểm tóm tắt lần cuối. */
+  summarizedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +44,8 @@ const documentSchema = new Schema<IDocument>(
     fileName: { type: String, required: true },
     fileSize: { type: Number, required: true },
     mimeType: { type: String, required: true },
+    summary: { type: String, default: null },
+    summarizedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

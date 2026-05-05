@@ -12,6 +12,25 @@ export class AiController {
 
   private readonly aiService: AiService;
 
+  /** GET /documents/:id/summary — lấy tóm tắt đã lưu, không gọi AI */
+  getCachedSummary = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.aiService.getCachedSummary(
+        req.params.id,
+        req.auth!.userId,
+        req.auth!.role,
+      );
+      sendOk(res, result);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
   /** POST /documents/:id/summarize */
   summarizeDocument = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -34,7 +53,7 @@ export class AiController {
   /** POST /documents/:id/quiz */
   generateQuiz = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { questionType = "mixed", count } = req.body as {
+      const { questionType = "multiple_choice", count } = req.body as {
         questionType?: string;
         count?: number;
       };
@@ -60,6 +79,82 @@ export class AiController {
         options,
       );
       sendOk(res, result);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  /** GET /documents/:id/quizzes */
+  listQuizzesByDocument = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const quizzes = await this.aiService.listQuizzesByDocument(
+        req.params.id,
+        req.auth!.userId,
+        req.auth!.role,
+      );
+      sendOk(res, { quizzes });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+
+  /** GET /quizzes */
+  listQuizzes = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const quizzes = await this.aiService.listQuizzes(
+        req.auth!.userId,
+        req.auth!.role,
+      );
+      sendOk(res, { quizzes });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  /** GET /quizzes/:id */
+  getQuizById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const quiz = await this.aiService.getQuizById(
+        req.params.id,
+        req.auth!.userId,
+        req.auth!.role,
+      );
+      sendOk(res, { quiz });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  /** DELETE /quizzes/:id */
+  deleteQuiz = async (req: Request, res: Response): Promise<void> => {
+    try {
+      await this.aiService.deleteQuiz(
+        req.params.id,
+        req.auth!.userId,
+        req.auth!.role,
+      );
+      sendOk(res, null);
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.status) {

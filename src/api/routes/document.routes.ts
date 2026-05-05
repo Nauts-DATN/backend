@@ -38,11 +38,17 @@ export function documentRoutes(
   /** Lấy ghi chú của document. */
   r.get("/:id/note", auth.authenticate, noteController.getByDocument);
 
-  /** Tóm tắt nội dung tài liệu bằng AI. */
+  /** Lấy bản tóm tắt AI đã lưu (không gọi lại AI). */
+  r.get("/:id/summary", auth.authenticate, aiController.getCachedSummary);
+
+  /** Tóm tắt nội dung tài liệu bằng AI và lưu vào DB. */
   r.post("/:id/summarize", auth.authenticate, aiController.summarizeDocument);
 
-  /** Tạo bộ câu hỏi từ tài liệu bằng AI. */
+  /** Tạo bộ câu hỏi từ tài liệu bằng AI và lưu vào DB. */
   r.post("/:id/quiz", auth.authenticate, aiController.generateQuiz);
+
+  /** Lấy danh sách quiz của document. */
+  r.get("/:id/quizzes", auth.authenticate, aiController.listQuizzesByDocument); 
 
   return r;
 }
