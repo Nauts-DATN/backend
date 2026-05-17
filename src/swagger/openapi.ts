@@ -1,9 +1,8 @@
 import { env } from "../config/env.js";
 
 const baseUrl =
-  process.env.PUBLIC_API_URL?.replace(/\/$/, "") ??
-  `http://localhost:${env.port}`;
-
+  env.apiPublicUrl || `http://localhost:${env.port}`;
+;
 const bearer = {
   type: "http" as const,
   scheme: "bearer" as const,
@@ -104,6 +103,11 @@ export const openApiSpec = {
       name: "notes",
       description:
         "Ghi chú gắn với document. Mỗi document có thể có nhiều ghi chú. User chỉ thao tác ghi chú của chính mình; admin thao tác tất cả.",
+    },
+    {
+      name: "roadmaps",
+      description:
+        "Lộ trình học tập gồm nhiều task. Progress tự tính bằng completedTasks / totalTasks * 100.",
     },
     {
       name: "ai",
@@ -1430,6 +1434,344 @@ export const openApiSpec = {
       },
     },
 
+    // ── roadmaps ─────────────────────────────────────────────────────────────
+    "/roadmaps": {
+      post: {
+        tags: ["roadmaps"],
+        summary: "Tạo roadmap",
+        operationId: "createRoadmap",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapBody" },
+              example: {
+                title: "Learn React in 14 days",
+                description: "Lộ trình học React cơ bản đến hooks",
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Đã tạo",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapData" }),
+              },
+            },
+          },
+          "400": { description: "Thiếu title", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+      get: {
+        tags: ["roadmaps"],
+        summary: "Danh sách roadmap của user hiện tại",
+        operationId: "listRoadmaps",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapListData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/roadmaps/{id}": {
+      get: {
+        tags: ["roadmaps"],
+        summary: "Chi tiết roadmap kèm tasks",
+        operationId: "getRoadmapById",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000100" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapDetailData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy roadmap", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+      patch: {
+        tags: ["roadmaps"],
+        summary: "Cập nhật roadmap",
+        operationId: "updateRoadmap",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000100" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapBodyPartial" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapData" }),
+              },
+            },
+          },
+          "400": { description: "Dữ liệu không hợp lệ", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy roadmap", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+      delete: {
+        tags: ["roadmaps"],
+        summary: "Xóa roadmap và toàn bộ tasks",
+        operationId: "deleteRoadmap",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000100" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Đã xóa",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/MessageData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy roadmap", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/roadmaps/{id}/tasks": {
+      post: {
+        tags: ["roadmaps"],
+        summary: "Thêm task vào roadmap",
+        operationId: "addRoadmapTask",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000100" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapTaskBody" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Đã tạo task",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapTaskMutationData" }),
+              },
+            },
+          },
+          "400": { description: "Thiếu title", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy roadmap/document", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/roadmaps/tasks/{taskId}": {
+      patch: {
+        tags: ["roadmaps"],
+        summary: "Cập nhật task",
+        operationId: "updateRoadmapTask",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "taskId",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000101" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapTaskBodyPartial" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapTaskMutationData" }),
+              },
+            },
+          },
+          "400": { description: "Dữ liệu không hợp lệ", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy task/document", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+      delete: {
+        tags: ["roadmaps"],
+        summary: "Xóa task",
+        operationId: "deleteRoadmapTask",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "taskId",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000101" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Đã xóa task",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapData" }),
+              },
+            },
+          },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy task", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/roadmaps/tasks/{taskId}/complete": {
+      patch: {
+        tags: ["roadmaps"],
+        summary: "Đánh dấu hoàn thành/chưa hoàn thành task",
+        operationId: "completeRoadmapTask",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "taskId",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000101" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapTaskCompleteBody" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapTaskMutationData" }),
+              },
+            },
+          },
+          "400": { description: "Thiếu hoặc sai isCompleted", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy task", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
+    "/roadmaps/tasks/{taskId}/document": {
+      patch: {
+        tags: ["roadmaps"],
+        summary: "Gắn hoặc bỏ document khỏi task",
+        description: "Truyền `documentId: null` để bỏ liên kết document.",
+        operationId: "attachDocumentToRoadmapTask",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "taskId",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "674a00000000000000000101" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RoadmapTaskDocumentBody" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: wrap({ $ref: "#/components/schemas/RoadmapTaskMutationData" }),
+              },
+            },
+          },
+          "400": { description: "Thiếu documentId", content: errContent() },
+          "401": { description: "Thiếu hoặc sai token", content: errContent() },
+          "403": { description: "Không có quyền", content: errContent() },
+          "404": { description: "Không tìm thấy task/document", content: errContent() },
+          "500": { $ref: "#/components/responses/InternalError" },
+        },
+      },
+    },
+
     // ── notes ────────────────────────────────────────────────────────────────
     "/notes": {
       post: {
@@ -2099,6 +2441,171 @@ export const openApiSpec = {
           },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+
+      // ── roadmap ──────────────────────────────────────────────────────────────
+      RoadmapPublic: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "674a00000000000000000100" },
+          userId: { type: "string", example: "674a000000000000000000aa" },
+          title: { type: "string", example: "Learn React in 14 days" },
+          description: {
+            type: "string",
+            example: "Lộ trình học React cơ bản đến hooks",
+          },
+          progress: {
+            type: "number",
+            minimum: 0,
+            maximum: 100,
+            example: 33,
+            description: "completedTasks / totalTasks * 100",
+          },
+          status: {
+            type: "string",
+            enum: ["in_progress", "completed"],
+            example: "in_progress",
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      RoadmapTaskPublic: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "674a00000000000000000101" },
+          roadmapId: { type: "string", example: "674a00000000000000000100" },
+          documentId: {
+            type: "string",
+            nullable: true,
+            example: "674a1b2c3d4e5f6789abcdef",
+          },
+          title: { type: "string", example: "Learn JSX" },
+          description: {
+            type: "string",
+            example: "Đọc tài liệu JSX và làm ví dụ nhỏ",
+          },
+          isCompleted: { type: "boolean", example: false },
+          completedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            example: null,
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      RoadmapData: {
+        type: "object",
+        properties: {
+          roadmap: { $ref: "#/components/schemas/RoadmapPublic" },
+        },
+      },
+      RoadmapListData: {
+        type: "object",
+        properties: {
+          roadmaps: {
+            type: "array",
+            items: { $ref: "#/components/schemas/RoadmapPublic" },
+          },
+        },
+      },
+      RoadmapDetailData: {
+        type: "object",
+        properties: {
+          roadmap: {
+            allOf: [
+              { $ref: "#/components/schemas/RoadmapPublic" },
+              {
+                type: "object",
+                properties: {
+                  tasks: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/RoadmapTaskPublic" },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      RoadmapTaskMutationData: {
+        type: "object",
+        properties: {
+          task: { $ref: "#/components/schemas/RoadmapTaskPublic" },
+          roadmap: { $ref: "#/components/schemas/RoadmapPublic" },
+        },
+      },
+      RoadmapBody: {
+        type: "object",
+        required: ["title"],
+        properties: {
+          title: { type: "string", example: "Learn React in 14 days" },
+          description: {
+            type: "string",
+            example: "Lộ trình học React cơ bản đến hooks",
+          },
+        },
+      },
+      RoadmapBodyPartial: {
+        type: "object",
+        properties: {
+          title: { type: "string", example: "Learn React in 21 days" },
+          description: { type: "string", example: "Cập nhật mô tả" },
+          status: {
+            type: "string",
+            enum: ["in_progress", "completed"],
+            example: "in_progress",
+          },
+        },
+      },
+      RoadmapTaskBody: {
+        type: "object",
+        required: ["title"],
+        properties: {
+          title: { type: "string", example: "Learn JSX" },
+          description: {
+            type: "string",
+            example: "Đọc tài liệu JSX và làm ví dụ nhỏ",
+          },
+          documentId: {
+            type: "string",
+            example: "674a1b2c3d4e5f6789abcdef",
+          },
+        },
+      },
+      RoadmapTaskBodyPartial: {
+        type: "object",
+        properties: {
+          title: { type: "string", example: "Learn JSX deeply" },
+          description: { type: "string", example: "Cập nhật mô tả task" },
+          documentId: {
+            type: "string",
+            nullable: true,
+            example: "674a1b2c3d4e5f6789abcdef",
+          },
+          isCompleted: { type: "boolean", example: true },
+        },
+      },
+      RoadmapTaskCompleteBody: {
+        type: "object",
+        required: ["isCompleted"],
+        properties: {
+          isCompleted: { type: "boolean", example: true },
+        },
+      },
+      RoadmapTaskDocumentBody: {
+        type: "object",
+        required: ["documentId"],
+        properties: {
+          documentId: {
+            type: "string",
+            nullable: true,
+            description: "ObjectId của document; truyền null để bỏ liên kết",
+            example: "674a1b2c3d4e5f6789abcdef",
+          },
         },
       },
 
