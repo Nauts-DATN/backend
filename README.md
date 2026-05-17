@@ -1,609 +1,282 @@
-# Google Gen AI SDK for TypeScript and JavaScript
+# EduAI Backend
 
-[![NPM Downloads](https://img.shields.io/npm/dw/%40google%2Fgenai)](https://www.npmjs.com/package/@google/genai)
-[![Node Current](https://img.shields.io/node/v/%40google%2Fgenai)](https://www.npmjs.com/package/@google/genai)
+Backend API cho hệ thống EduAI: quản lý tài liệu học tập, ghi chú, quiz, tóm tắt tài liệu bằng AI, xác thực người dùng và chia sẻ tài liệu cộng đồng.
 
-----------------------
-**Documentation:** https://googleapis.github.io/js-genai/
+## Tech Stack
 
-----------------------
+- Node.js 20+
+- TypeScript, ESM
+- Express
+- MongoDB + Mongoose
+- Awilix dependency injection
+- JWT authentication
+- S3-compatible object storage, ví dụ MinIO
+- Google Gemini qua `@google/genai`
+- Swagger UI
 
-The Google Gen AI JavaScript SDK is designed for
-TypeScript and JavaScript developers to build applications powered by Gemini. The SDK
-supports both the [Gemini Developer API](https://ai.google.dev/gemini-api/docs)
-and [Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/overview).
+## Cấu Trúc Thư Mục
 
-The Google Gen AI SDK is designed to work with Gemini 2.0+ features.
-
-> [!CAUTION]
-> **API Key Security:** Avoid exposing API keys in client-side code.
-> Use server-side implementations in production environments.
-
-## Code Generation
-
-Generative models are often unaware of recent API and SDK updates and may suggest outdated or legacy code.
-
-We recommend using our Code Generation instructions [`codegen_instructions.md`](https://raw.githubusercontent.com/googleapis/js-genai/refs/heads/main/codegen_instructions.md) when generating Google Gen AI SDK code to guide your model towards using the more recent SDK features. Copy and paste the instructions into your development environment to provide the model with the necessary context.
-
-## Prerequisites
-
-1. Node.js version 20 or later
-
-### The following are required for Vertex AI users (excluding Vertex AI Studio)
-1.  [Select](https://console.cloud.google.com/project) or [create](https://cloud.google.com/resource-manager/docs/creating-managing-projects#creating_a_project) a Google Cloud project.
-1.  [Enable billing for your project](https://cloud.google.com/billing/docs/how-to/modify-project).
-1.  [Enable the Vertex AI API](https://console.cloud.google.com/flows/enableapi?apiid=aiplatform.googleapis.com).
-1.  [Configure authentication](https://cloud.google.com/docs/authentication) for your project.
-    *   [Install the gcloud CLI](https://cloud.google.com/sdk/docs/install).
-    *   [Initialize the gcloud CLI](https://cloud.google.com/sdk/docs/initializing).
-    *   Create local authentication credentials for your user account:
-
-    ```sh
-    gcloud auth application-default login
-    ```
-A list of accepted authentication options are listed in [GoogleAuthOptions](https://github.com/googleapis/google-auth-library-nodejs/blob/3ae120d0a45c95e36c59c9ac8286483938781f30/src/auth/googleauth.ts#L87) interface of google-auth-library-node.js GitHub repo.
-
-## Installation
-
-To install the SDK, run the following command:
-
-```shell
-npm install @google/genai
+```text
+src/
+  api/
+    controllers/    # Xử lý HTTP request/response
+    routes/         # Khai báo route
+  config/           # Env và cấu hình hạ tầng
+  db/               # Mongo client, migrations, seeds
+  di/               # Awilix container
+  llm/              # Prompt và Gemini helpers
+  middleware/       # Auth, error handling
+  models/           # Mongoose schemas
+  repositories/     # Data access layer
+  services/         # Business logic
+  storage/          # S3/MinIO storage service
+  swagger/          # OpenAPI spec
+  utils/            # Helper chung
 ```
 
-## Quickstart
+Luồng xử lý chính:
 
-The simplest way to get started is to use an API key from
-[Google AI Studio](https://aistudio.google.com/apikey):
-
-```typescript
-import {GoogleGenAI} from '@google/genai';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-
-async function main() {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: 'Why is the sky blue?',
-  });
-  console.log(response.text);
-}
-
-main();
+```text
+Route -> Controller -> Service -> Repository/Storage/LLM -> Response
 ```
 
-## Initialization
-
-The Google Gen AI SDK provides support for both the
-[Google AI Studio](https://ai.google.dev/gemini-api/docs) and
-[Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/overview)
- implementations of the Gemini API.
-
-### Gemini Developer API
-
-For server-side applications, initialize using an API key, which can
-be acquired from [Google AI Studio](https://aistudio.google.com/apikey):
-
-```typescript
-import { GoogleGenAI } from '@google/genai';
-const ai = new GoogleGenAI({apiKey: 'GEMINI_API_KEY'});
-```
-
-#### Browser
-
-> [!CAUTION]
-> **API Key Security:** Avoid exposing API keys in client-side code.
->   Use server-side implementations in production environments.
-
-In the browser the initialization code is identical:
-
-
-```typescript
-import { GoogleGenAI } from '@google/genai';
-const ai = new GoogleGenAI({apiKey: 'GEMINI_API_KEY'});
-```
-
-### Vertex AI
-
-Sample code for VertexAI initialization:
-
-```typescript
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({
-    vertexai: true,
-    project: 'your_project',
-    location: 'your_location',
-});
-```
-
-### (Optional) (NodeJS only) Using environment variables:
-
-For NodeJS environments, you can create a client by configuring the necessary
-environment variables. Configuration setup instructions depends on whether
-you're using the Gemini Developer API or the Gemini API in Vertex AI.
-
-**Gemini Developer API:** Set `GOOGLE_API_KEY` as shown below:
+## Cài Đặt
 
 ```bash
-export GOOGLE_API_KEY='your-api-key'
+npm install
 ```
 
-**Gemini API on Vertex AI:** Set `GOOGLE_GENAI_USE_VERTEXAI`,
-`GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`, as shown below:
+## Biến Môi Trường
+
+Tạo file `.env` trong thư mục `backend`.
+
+```env
+PORT=4000
+NODE_ENV=development
+
+MONGODB_URI=mongodb://localhost:27017/eduai
+
+JWT_SECRET=change-me
+JWT_EXPIRES_IN=7d
+
+PUBLIC_API_URL=http://localhost:4000
+
+S3_ENDPOINT=http://localhost:9000
+S3_REGION=us-east-1
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=eduai
+S3_FORCE_PATH_STYLE=true
+
+GEMINI_API_KEY=
+
+EMAIL_FROM="EduAI <noreply@localhost>"
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+EMAIL_VERIFICATION_EXPIRES_HOURS=24
+
+RUN_MIGRATIONS_ON_STARTUP=false
+RUN_SEEDS_ON_STARTUP=false
+
+ADMIN_BOOTSTRAP_EMAIL=
+ADMIN_BOOTSTRAP_PASSWORD=
+ADMIN_BOOTSTRAP_NAME=Admin
+```
+
+Các biến bắt buộc khi khởi động server:
+
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `S3_ENDPOINT`
+- `S3_ACCESS_KEY`
+- `S3_SECRET_KEY`
+- `S3_BUCKET`
+
+`GEMINI_API_KEY` chỉ bắt buộc khi dùng tính năng AI như tóm tắt PDF hoặc tạo quiz.
+
+## Chạy Hạ Tầng Local
+
+Repo có sẵn `docker-compose.yml` cho MongoDB và MinIO.
 
 ```bash
-export GOOGLE_GENAI_USE_VERTEXAI=true
-export GOOGLE_CLOUD_PROJECT='your-project-id'
-export GOOGLE_CLOUD_LOCATION='us-central1'
+docker compose up -d
 ```
 
-```typescript
-import {GoogleGenAI} from '@google/genai';
+MinIO console mặc định:
 
-const ai = new GoogleGenAI();
+- API: `http://localhost:9000`
+- Console: `http://localhost:9001`
+
+Thông tin đăng nhập MinIO lấy từ `S3_ACCESS_KEY` và `S3_SECRET_KEY`.
+
+## Chạy Ứng Dụng
+
+Development:
+
+```bash
+npm run dev
 ```
 
-## API Selection
+Build:
 
-By default, the SDK uses the beta API endpoints provided by Google to support
-preview features in the APIs. The stable API endpoints can be selected by
-setting the API version to `v1`.
-
-To set the API version use `apiVersion`. For example, to set the API version to
-`v1` for Vertex AI:
-
-```typescript
-const ai = new GoogleGenAI({
-    vertexai: true,
-    project: 'your_project',
-    location: 'your_location',
-    apiVersion: 'v1'
-});
+```bash
+npm run build
 ```
 
-To set the API version to `v1alpha` for the Gemini Developer API:
+Production:
 
-```typescript
-const ai = new GoogleGenAI({
-    apiKey: 'GEMINI_API_KEY',
-    apiVersion: 'v1alpha'
-});
+```bash
+npm start
 ```
 
-## GoogleGenAI overview
+Mặc định API chạy tại:
 
-All API features are accessed through an instance of the `GoogleGenAI` classes.
-The submodules bundle together related API methods:
+```text
+http://localhost:4000
+```
 
-- [`ai.models`](https://googleapis.github.io/js-genai/release_docs/classes/models.Models.html):
-  Use `models` to query models (`generateContent`, `generateImages`, ...), or
-  examine their metadata.
-- [`ai.caches`](https://googleapis.github.io/js-genai/release_docs/classes/caches.Caches.html):
-  Create and manage `caches` to reduce costs when repeatedly using the same
-  large prompt prefix.
-- [`ai.chats`](https://googleapis.github.io/js-genai/release_docs/classes/chats.Chats.html):
-  Create local stateful `chat` objects to simplify multi turn interactions.
-- [`ai.files`](https://googleapis.github.io/js-genai/release_docs/classes/files.Files.html):
-  Upload `files` to the API and reference them in your prompts.
-  This reduces bandwidth if you use a file many times, and handles files too
-  large to fit inline with your prompt.
-- [`ai.live`](https://googleapis.github.io/js-genai/release_docs/classes/live.Live.html):
-  Start a `live` session for real time interaction, allows text + audio + video
-  input, and text or audio output.
+Swagger UI:
 
-## Samples
+```text
+http://localhost:4000/api/docs
+```
 
-More samples can be found in the
-[github samples directory](https://github.com/googleapis/js-genai/tree/main/sdk-samples).
+OpenAPI JSON:
 
-### Streaming
+```text
+http://localhost:4000/api/openapi.json
+```
 
-For quicker, more responsive API interactions use the `generateContentStream`
-method which yields chunks as they're generated:
+## Scripts
 
-```typescript
-import {GoogleGenAI} from '@google/genai';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+```bash
+npm run dev                  # Chạy server bằng tsx watch
+npm run build                # Compile TypeScript ra dist
+npm start                    # Chạy dist/server.js
+npm run lint                 # Type-check bằng tsc --noEmit
+npm run cli                  # Chạy CLI nội bộ
+npm run db:migrate           # Chạy pending migrations
+npm run db:seed              # Chạy pending seeds
+npm run db:migrate:status    # Xem trạng thái migrations
+npm run db:seed:status       # Xem trạng thái seeds
+npm run db:migration:create  # Tạo migration mới
+npm run db:seed:create       # Tạo seed mới
+```
 
-const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
+## API Chính
 
-async function main() {
-  const response = await ai.models.generateContentStream({
-    model: 'gemini-2.5-flash',
-    contents: 'Write a 100-word poem.',
-  });
-  for await (const chunk of response) {
-    console.log(chunk.text);
-  }
+Tất cả route nghiệp vụ nằm dưới prefix `/api`.
+
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/verify-email`
+- `POST /api/auth/verify-email-code`
+- `POST /api/auth/resend-verification`
+- `GET /api/auth/me`
+
+### Users
+
+- `GET /api/users`
+- `GET /api/users/:id`
+- Route upload avatar được khai báo trong user routes.
+
+### Documents
+
+- `POST /api/documents`
+- `GET /api/documents`
+- `GET /api/documents/community`
+- `GET /api/documents/:id`
+- `GET /api/documents/:id/presigned-url`
+- `GET /api/documents/:id/download`
+- `PATCH /api/documents/:id`
+- `PATCH /api/documents/:id/visibility`
+- `DELETE /api/documents/:id`
+
+Upload document dùng `multipart/form-data` với field file là `file`.
+
+### Notes
+
+- `GET /api/notes`
+- `POST /api/notes`
+- `PUT /api/notes/:id`
+- `DELETE /api/notes/:id`
+- `GET /api/documents/:id/note`
+
+### AI
+
+- `GET /api/documents/:id/summary`
+- `POST /api/documents/:id/summarize`
+- `POST /api/documents/:id/quiz`
+- `GET /api/documents/:id/quizzes`
+- `GET /api/quizzes`
+- `GET /api/quizzes/:id`
+- `DELETE /api/quizzes/:id`
+
+AI hiện hỗ trợ file PDF. Khi upload DOCX, backend sẽ cố gắng convert sang PDF trước khi lưu.
+
+### Categories Và Courses
+
+- `GET /api/categories`
+- `POST /api/categories`
+- `GET /api/categories/:id`
+- `PUT /api/categories/:id`
+- `DELETE /api/categories/:id`
+- `GET /api/courses`
+- `POST /api/courses`
+- `GET /api/courses/:id`
+- `PUT /api/courses/:id`
+- `DELETE /api/courses/:id`
+
+### Health
+
+- `GET /api/health`
+
+## Authentication
+
+Các route cần đăng nhập dùng JWT bearer token:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Role hiện có:
+
+- `user`
+- `admin`
+
+## Response Format
+
+API trả về format thống nhất:
+
+```json
+{
+  "status": 200,
+  "error": null,
+  "isSuccess": true,
+  "data": {}
 }
-
-main();
 ```
 
-### Function Calling
+Khi lỗi:
 
-To let Gemini to interact with external systems, you can provide
-`functionDeclaration` objects as `tools`. To use these tools it's a 4 step
-
-1. **Declare the function name, description, and parametersJsonSchema**
-2. **Call `generateContent` with function calling enabled**
-3. **Use the returned `FunctionCall` parameters to call your actual function**
-3. **Send the result back to the model (with history, easier in `ai.chat`)
-   as a `FunctionResponse`**
-
-```typescript
-import {GoogleGenAI, FunctionCallingConfigMode, FunctionDeclaration, Type} from '@google/genai';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-async function main() {
-  const controlLightDeclaration: FunctionDeclaration = {
-    name: 'controlLight',
-    parametersJsonSchema: {
-      type: 'object',
-      properties:{
-        brightness: {
-          type:'number',
-        },
-        colorTemperature: {
-          type:'string',
-        },
-      },
-      required: ['brightness', 'colorTemperature'],
-    },
-  };
-
-  const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: 'Dim the lights so the room feels cozy and warm.',
-    config: {
-      toolConfig: {
-        functionCallingConfig: {
-          // Force it to call any function
-          mode: FunctionCallingConfigMode.ANY,
-          allowedFunctionNames: ['controlLight'],
-        }
-      },
-      tools: [{functionDeclarations: [controlLightDeclaration]}]
-    }
-  });
-
-  console.log(response.functionCalls);
+```json
+{
+  "status": 400,
+  "error": "Message",
+  "isSuccess": false,
+  "data": null
 }
-
-main();
 ```
 
-#### Model Context Protocol (MCP) support (experimental)
-
-Built-in [MCP](https://modelcontextprotocol.io/introduction) support is an
-experimental feature. You can pass a local MCP server as a tool directly.
-
-```javascript
-import { GoogleGenAI, FunctionCallingConfigMode , mcpToTool} from '@google/genai';
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-
-// Create server parameters for stdio connection
-const serverParams = new StdioClientTransport({
-  command: "npx", // Executable
-  args: ["-y", "@philschmid/weather-mcp"] // MCP Server
-});
-
-const client = new Client(
-  {
-    name: "example-client",
-    version: "1.0.0"
-  }
-);
-
-// Configure the client
-const ai = new GoogleGenAI({});
-
-// Initialize the connection between client and server
-await client.connect(serverParams);
-
-// Send request to the model with MCP tools
-const response = await ai.models.generateContent({
-  model: "gemini-2.5-flash",
-  contents: `What is the weather in London in ${new Date().toLocaleDateString()}?`,
-  config: {
-    tools: [mcpToTool(client)],  // uses the session, will automatically call the tool using automatic function calling
-  },
-});
-console.log(response.text);
-
-// Close the connection
-await client.close();
-```
-
-### Generate Content
-
-#### How to structure `contents` argument for `generateContent`
-
-The SDK allows you to specify the following types in the `contents` parameter:
-
-#### Content
-
-- `Content`: The SDK will wrap the singular `Content` instance in an array which
-contains only the given content instance
-- `Content[]`: No transformation happens
-
-#### Part
-
-Parts will be aggregated on a singular Content, with role 'user'.
-
-- `Part | string`: The SDK will wrap the `string` or `Part` in a `Content`
-instance with role 'user'.
-- `Part[] | string[]`: The SDK will wrap the full provided list into a single
-`Content` with role 'user'.
-
-**_NOTE:_** This doesn't apply to `FunctionCall` and `FunctionResponse` parts,
-if you are specifying those, you need to explicitly provide the full
-`Content[]` structure making it explicit which Parts are 'spoken' by the model,
-or the user. The SDK will throw an exception if you try this.
-
-## Error Handling
-
-To handle errors raised by the API, the SDK provides this [ApiError](https://github.com/googleapis/js-genai/blob/main/src/errors.ts) class.
-
-```typescript
-import {GoogleGenAI} from '@google/genai';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
-
-async function main() {
-  await ai.models.generateContent({
-    model: 'non-existent-model',
-    contents: 'Write a 100-word poem.',
-  }).catch((e) => {
-    console.error('error name: ', e.name);
-    console.error('error message: ', e.message);
-    console.error('error status: ', e.status);
-  });
-}
-
-main();
-```
-
-## Interactions (Preview)
-
-> **Warning:** The Interactions API is in **Beta**. This is a preview of an
-experimental feature. Features and schemas are subject to **breaking changes**.
-
-The Interactions API is a unified interface for interacting with Gemini models
-and agents. It simplifies state management, tool orchestration, and long-running
-tasks.
-
-See the [documentation site](https://ai.google.dev/gemini-api/docs/interactions)
-for more details.
-
-### Basic Interaction
-
-```typescript
-const interaction = await ai.interactions.create({
-    model: 'gemini-2.5-flash',
-    input: 'Hello, how are you?',
-});
-console.debug(interaction);
-
-```
-
-### Stateful Conversation
-
-The Interactions API supports server-side state management. You can continue a
-conversation by referencing the `previous_interaction_id`.
-
-```typescript
-// 1. First turn
-const interaction1 = await ai.interactions.create({
-    model: 'gemini-2.5-flash',
-    input: 'Hi, my name is Amir.',
-});
-console.debug(interaction1);
-
-// 2. Second turn (passing previous_interaction_id)
-const interaction2 = await ai.interactions.create({
-  model: 'gemini-2.5-flash',
-  input: 'What is my name?',
-  previous_interaction_id: interaction1.id,
-});
-console.debug(interaction2);
-
-```
-
-### Agents (Deep Research)
-
-You can use specialized agents like `deep-research-pro-preview-12-2025` for
-complex tasks.
-
-```typescript
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// 1. Start the Deep Research Agent
-const initialInteraction = await ai.interactions.create({
-  input:
-      'Research the history of the Google TPUs with a focus on 2025 and 2026.',
-  agent: 'deep-research-pro-preview-12-2025',
-  background: true,
-});
-
-console.log(`Research started. Interaction ID: ${initialInteraction.id}`);
-
-// 2. Poll for results
-while (true) {
-  const interaction = await ai.interactions.get(initialInteraction.id);
-  console.log(`Status: ${interaction.status}`);
-
-  if (interaction.status === 'completed') {
-    console.debug('\nFinal Report:\n', interaction.outputs);
-    break;
-  } else if (['failed', 'cancelled'].includes(interaction.status)) {
-    console.log(`Failed with status: ${interaction.status}`);
-    break;
-  }
-
-  await sleep(10000);  // Sleep for 10 seconds
-}
-
-```
-
-### Multimodal Input
-
-You can provide multimodal data (text, images, audio, etc.) in the input list.
-
-```typescript
-import base64
-
-// Assuming you have a base64 string
-// const base64Image = ...;
-
-const interaction = await ai.interactions.create({
-  model: 'gemini-2.5-flash',
-  input: [
-    { type: 'text', text: 'Describe the image.' },
-    { type: 'image', data: base64Image, mime_type: 'image/png' },
-  ],
-});
-
-console.debug(interaction);
-
-```
-
-### Function Calling
-
-You can define custom functions for the model to use. The Interactions API
-handles the tool selection, and you provide the execution result back to the
-model.
-
-```typescript
-// 1. Define the tool
-const getWeather = (location: string) => {
-  /* Gets the weather for a given location. */
-  return `The weather in ${location} is sunny.`;
-};
-
-// 2. Send the request with tools
-let interaction = await ai.interactions.create({
-  model: 'gemini-2.5-flash',
-  input: 'What is the weather in Mountain View, CA?',
-  tools: [
-    {
-      type: 'function',
-      name: 'get_weather',
-      description: 'Gets the weather for a given location.',
-      parameters: {
-        type: 'object',
-        properties: {
-          location: {
-            type: 'string',
-            description: 'The city and state, e.g. San Francisco, CA',
-          },
-        },
-        required: ['location'],
-      },
-    },
-  ],
-});
-
-// 3. Handle the tool call
-for (const output of interaction.outputs!) {
-  if (output.type === 'function_call') {
-    console.log(
-        `Tool Call: ${output.name}(${JSON.stringify(output.arguments)})`);
-
-    // Execute your actual function here
-    // Note: ensure arguments match your function signature
-    const result = getWeather(JSON.stringify(output.arguments.location));
-
-    // Send result back to the model
-    interaction = await ai.interactions.create({
-      model: 'gemini-2.5-flash',
-      previous_interaction_id: interaction.id,
-      input: [
-        {
-          type: 'function_result',
-          name: output.name,
-          call_id: output.id,
-          result: result,
-        },
-      ],
-    });
-
-    console.debug(`Response: ${JSON.stringify(interaction)}`);
-  }
-}
-
-```
-
-### Built-in Tools
-You can also use Google's built-in tools, such as **Google Search** or **Code
-Execution**.
-
-#### Grounding with Google Search
-
-```typescript
-const interaction = await ai.interactions.create({
-  model: 'gemini-2.5-flash',
-  input: 'Who won the last Super Bowl',
-  tools: [{ type: 'google_search' }],
-});
-
-console.debug(interaction);
-
-```
-
-#### Code Execution
-
-```typescript
-const interaction = await ai.interactions.create({
-  model: 'gemini-2.5-flash',
-  input: 'Calculate the 50th Fibonacci number.',
-  tools: [{ type: 'code_execution' }],
-});
-
-console.debug(interaction);
-
-```
-
-### Multimodal Output
-
-The Interactions API can generate multimodal outputs, such as images. You must
-specify the `response_modalities`.
-
-```typescript
-import * as fs from 'fs';
-
-const interaction = await ai.interactions.create({
-  model: 'gemini-3-pro-image-preview',
-  input: 'Generate an image of a futuristic city.',
-  response_modalities: ['image'],
-});
-
-for (const output of interaction.outputs!) {
-  if (output.type === 'image') {
-    console.log(`Generated image with mime_type: ${output.mime_type}`);
-    // Save the image
-    fs.writeFileSync(
-        'generated_city.png', Buffer.from(output.data!, 'base64'));
-  }
-}
-
-```
-
-## How is this different from the other Google AI SDKs
-This SDK (`@google/genai`) is Google Deepmind’s "vanilla" SDK for its generative
-AI offerings, and is where Google Deepmind adds new AI features.
-
-Models hosted either on the [Vertex AI platform](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/overview) or the [Gemini Developer platform](https://ai.google.dev/gemini-api/docs) are accessible through this SDK.
-
-Other SDKs may be offering additional AI frameworks on top of this SDK, or may
-be targeting specific project environments (like Firebase).
-
-The `@google/generative_language` and `@google-cloud/vertexai` SDKs are previous
-iterations of this SDK and are no longer receiving new Gemini 2.0+ features.
+## Ghi Chú Phát Triển
+
+- Không đưa `GEMINI_API_KEY`, `JWT_SECRET`, SMTP password hoặc S3 secret lên client.
+- Web app nên gọi API qua `/api` khi dev để dùng Vite proxy.
+- Nếu bật `RUN_MIGRATIONS_ON_STARTUP=true`, server sẽ chạy pending migrations sau khi kết nối Mongo.
+- Nếu bật `RUN_SEEDS_ON_STARTUP=true`, server sẽ chạy pending seeds sau migrations.
+- Bucket S3/MinIO sẽ được kiểm tra/tạo khi server khởi động.

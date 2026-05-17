@@ -12,6 +12,7 @@ export type PublicDocument = {
   id: string;
   title: string;
   description?: string;
+  isPublic: boolean;
   uploadedBy: string;
   category?: string;
   course?: string;
@@ -37,9 +38,16 @@ export type UploadDocumentInput = {
   uploadedBy: string;
   category?: string;
   course?: string;
+  isPublic?: boolean;
   buffer: Buffer;
   originalName: string;
   mimeType: string;
+};
+
+export type DocumentListFilters = {
+  search?: string;
+  category?: string;
+  course?: string;
 };
 
 function makeErr(message: string, status: number): Error & { status: number } {
@@ -72,6 +80,7 @@ export class DocumentService {
       id: doc._id.toString(),
       title: doc.title,
       description: doc.description,
+      isPublic: doc.isPublic,
       uploadedBy: doc.uploadedBy.toString(),
       category: doc.category?.toString(),
       course: doc.course?.toString(),
@@ -108,6 +117,7 @@ export class DocumentService {
     const doc = await this.documentRepository.create({
       title: input.title,
       description: input.description,
+      isPublic: input.isPublic ?? false,
       uploadedBy: input.uploadedBy,
       category: input.category,
       course: input.course,
@@ -123,11 +133,15 @@ export class DocumentService {
   async list(
     requesterId: string,
     requesterRole: string,
+    filters: DocumentListFilters = {},
   ): Promise<PublicDocument[]> {
-    const docs =
-      requesterRole === "admin"
-        ? await this.documentRepository.findAll()
-        : await this.documentRepository.findByUser(requesterId);
+    const docs = await this.documentRepository.findMany({
+      uploadedBy: requesterRole === "admin" ? undefined : requesterId,
+      search: filters.search,
+      category: filters.category,
+      course: filters.course,
+      limit: 100,
+    });
     return Promise.all(docs.map((d) => this.toPublic(d)));
   }
 
@@ -138,10 +152,7 @@ export class DocumentService {
   ): Promise<PublicDocument> {
     const doc = await this.documentRepository.findById(id);
     if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (
-      requesterRole !== "admin" &&
-      doc.uploadedBy.toString() !== requesterId
-    ) {
+    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
       throw makeErr("Không có quyền", 403);
     }
     return this.toPublic(doc);
@@ -156,10 +167,7 @@ export class DocumentService {
   ): Promise<{ url: string; fileName: string; expiresIn: number }> {
     const doc = await this.documentRepository.findById(id);
     if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (
-      requesterRole !== "admin" &&
-      doc.uploadedBy.toString() !== requesterId
-    ) {
+    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
       throw makeErr("Không có quyền", 403);
     }
     const url = await this.s3Storage.getPresignedUrl(doc.fileKey, expiresIn);
@@ -179,10 +187,7 @@ export class DocumentService {
   }> {
     const doc = await this.documentRepository.findById(id);
     if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (
-      requesterRole !== "admin" &&
-      doc.uploadedBy.toString() !== requesterId
-    ) {
+    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
       throw makeErr("Không có quyền", 403);
     }
     const { body, contentType, contentLength } =
@@ -205,5 +210,33 @@ export class DocumentService {
     }
     await this.s3Storage.deleteObject(doc.fileKey).catch(() => undefined);
     await this.documentRepository.deleteById(id);
+  }
+
+  /** Danh sách tài liệu public cho cộng đồng. */
+  async listCommunity(filters: DocumentListFilters = {}): Promise<PublicDocument[]> {
+    const docs = await this.documentRepository.findPublic({
+      search: filters.search,
+      category: filters.category,
+      course: filters.course,
+      limit: 200,
+    });
+    return Promise.all(docs.map((d) => this.toPublic(d)));
+  }
+
+  /** Chủ sở hữu/admin đổi trạng thái public/private. */
+  async setVisibility(
+    id: string,
+    isPublic: boolean,
+    requesterId: string,
+    requesterRole: string,
+  ): Promise<PublicDocument> {
+    const doc = await this.documentRepository.findById(id);
+    if (!doc) throw makeErr("Không tìm thấy document", 404);
+    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
+      throw makeErr("Không có quyền", 403);
+    }
+    const updated = await this.documentRepository.setVisibility(id, isPublic);
+    if (!updated) throw makeErr("Cập nhật trạng thái thất bại", 500);
+    return this.toPublic(updated);
   }
 }

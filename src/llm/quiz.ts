@@ -2,7 +2,7 @@ import { Type } from "@google/genai";
 import { getGenAI } from "./genai.js";
 import { buildQuizPrompt } from "./prompts.js";
 
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 export type QuestionType = "multiple_choice" | "essay";
 

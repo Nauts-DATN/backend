@@ -3,6 +3,8 @@ import mongoose, { Schema, type Types } from "mongoose";
 export interface IDocument {
   title: string;
   description?: string;
+  /** Public cho cộng đồng hay không. */
+  isPublic: boolean;
   uploadedBy: Types.ObjectId;
   category?: Types.ObjectId;
   course?: Types.ObjectId;
@@ -22,6 +24,7 @@ const documentSchema = new Schema<IDocument>(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
+    isPublic: { type: Boolean, required: true, default: false, index: true },
     uploadedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",

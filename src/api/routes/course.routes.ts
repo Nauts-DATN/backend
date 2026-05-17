@@ -10,9 +10,9 @@ export function courseRoutes(
 
   r.get("/", auth.authenticate, courseController.list);
   r.get("/:id", auth.authenticate, courseController.getById);
-  r.post("/", auth.authenticate, courseController.create);
-  r.patch("/:id", auth.authenticate, courseController.update);
-  r.delete("/:id", auth.authenticate, courseController.deleteById);
+  r.post("/", auth.authenticate, auth.requireRoles("admin"), courseController.create);
+  r.patch("/:id", auth.authenticate, auth.requireRoles("admin"), courseController.update);
+  r.delete("/:id", auth.authenticate, auth.requireRoles("admin"), courseController.deleteById);
 
   return r;
 }
