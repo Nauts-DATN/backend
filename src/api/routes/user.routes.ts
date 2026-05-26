@@ -14,11 +14,25 @@ export function userRoutes(
 ): Router {
   const r = Router();
 
-  r.get(
-    "/",
+  r.patch(
+    "/update-name",
     auth.authenticate,
-    auth.requireRoles("admin"),
-    userController.list,
+    userController.updateName,
+  );
+  r.patch(
+    "/update-password",
+    auth.authenticate,
+    userController.updatePassword,
+  );
+  r.patch(
+    "/update-avatar",
+    auth.authenticate,
+    upload.single("avatar"),
+    userController.updateAvatar,
+  );
+  r.get(
+    "/:id/avatar",
+    userController.getAvatar,
   );
   r.get(
     "/:id",

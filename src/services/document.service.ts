@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { DocumentRepository } from "../repositories/document.repository.js";
+import type { NoteRepository } from "../repositories/note.repository.js";
+import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
 import type { PdfConverterService } from "./pdf-converter.service.js";
 import type { IDocument } from "../models/document.model.js";
@@ -61,15 +63,21 @@ export class DocumentService {
     documentRepository: DocumentRepository,
     s3Storage: S3StorageService,
     pdfConverterService: PdfConverterService,
+    noteRepository: NoteRepository,
+    quizRepository: QuizRepository,
   ) {
     this.documentRepository = documentRepository;
     this.s3Storage = s3Storage;
     this.pdfConverterService = pdfConverterService;
+    this.noteRepository = noteRepository;
+    this.quizRepository = quizRepository;
   }
 
   private readonly documentRepository: DocumentRepository;
   private readonly s3Storage: S3StorageService;
   private readonly pdfConverterService: PdfConverterService;
+  private readonly noteRepository: NoteRepository;
+  private readonly quizRepository: QuizRepository;
 
   private async toPublic(
     doc: IDocument & { _id: Types.ObjectId },
@@ -209,6 +217,10 @@ export class DocumentService {
       throw makeErr("Không có quyền", 403);
     }
     await this.s3Storage.deleteObject(doc.fileKey).catch(() => undefined);
+    await Promise.all([
+      this.noteRepository.deleteByDocument(id),
+      this.quizRepository.deleteByDocument(id),
+    ]);
     await this.documentRepository.deleteById(id);
   }
 

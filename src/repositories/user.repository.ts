@@ -36,6 +36,13 @@ export class UserRepository {
     return doc as (IUser & { _id: Types.ObjectId; password: string }) | null;
   }
 
+  async findByIdWithPassword(
+    id: string,
+  ): Promise<(IUser & { _id: Types.ObjectId; password: string }) | null> {
+    const doc = await UserModel.findById(id).select("+password").lean().exec();
+    return doc as (IUser & { _id: Types.ObjectId; password: string }) | null;
+  }
+
   async findByVerificationTokenHash(
     hash: string,
   ): Promise<
@@ -147,6 +154,26 @@ export class UserRepository {
       .lean()
       .exec();
     return doc as (IUser & { _id: Types.ObjectId }) | null;
+  }
+
+  async updateName(
+    userId: string,
+    name: string,
+  ): Promise<(IUser & { _id: Types.ObjectId }) | null> {
+    const doc = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { name } },
+      { new: true },
+    )
+      .lean()
+      .exec();
+    return doc as (IUser & { _id: Types.ObjectId }) | null;
+  }
+
+  async updatePassword(userId: string, password: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      $set: { password },
+    }).exec();
   }
 
   async list(limit = 50): Promise<(IUser & { _id: Types.ObjectId })[]> {
