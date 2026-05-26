@@ -55,4 +55,9 @@ export class NoteRepository {
     const r = await NoteModel.findByIdAndDelete(id).exec();
     return !!r;
   }
+
+  async deleteByDocument(documentId: string): Promise<number> {
+    const r = await NoteModel.deleteMany({ document: documentId }).exec();
+    return r.deletedCount ?? 0;
+  }
 }

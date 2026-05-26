@@ -57,4 +57,9 @@ export class QuizRepository {
     const r = await QuizModel.findByIdAndDelete(id).exec();
     return !!r;
   }
+
+  async deleteByDocument(documentId: string): Promise<number> {
+    const r = await QuizModel.deleteMany({ document: documentId }).exec();
+    return r.deletedCount ?? 0;
+  }
 }
