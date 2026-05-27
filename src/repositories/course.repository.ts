@@ -3,6 +3,7 @@ import { CourseModel, type CourseDoc } from "../models/course.model.js";
 export type CreateCourseInput = {
   name: string;
   description?: string;
+  userId: string;
 };
 
 export class CourseRepository {
@@ -15,8 +16,11 @@ export class CourseRepository {
     return (await CourseModel.findById(id).lean().exec()) as CourseDoc | null;
   }
 
-  async findAll(): Promise<CourseDoc[]> {
-    return (await CourseModel.find().sort({ name: 1 }).lean().exec()) as unknown as CourseDoc[];
+  async findByUser(userId: string): Promise<CourseDoc[]> {
+    return (await CourseModel.find({ userId })
+      .sort({ name: 1 })
+      .lean()
+      .exec()) as unknown as CourseDoc[];
   }
 
   async update(
