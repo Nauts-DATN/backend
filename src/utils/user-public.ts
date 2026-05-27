@@ -7,6 +7,7 @@ export type PublicUser = {
   email: string;
   avatar?: string;
   role: UserRole;
+  isBlocked: boolean;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -21,6 +22,7 @@ export function toPublicUser(
     email: u.email,
     avatar: u.avatar,
     role: u.role,
+    isBlocked: u.isBlocked ?? false,
     emailVerified: u.emailVerified ?? false,
     createdAt: u.createdAt.toISOString(),
     updatedAt: u.updatedAt.toISOString(),

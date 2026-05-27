@@ -140,11 +140,12 @@ export class DocumentService {
 
   async list(
     requesterId: string,
-    requesterRole: string,
+    // requesterRole: string,
     filters: DocumentListFilters = {},
   ): Promise<PublicDocument[]> {
     const docs = await this.documentRepository.findMany({
-      uploadedBy: requesterRole === "admin" ? undefined : requesterId,
+      // uploadedBy: requesterRole === "admin" ? undefined : requesterId,
+      uploadedBy: requesterId,
       search: filters.search,
       category: filters.category,
       course: filters.course,

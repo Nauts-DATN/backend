@@ -9,6 +9,7 @@ export interface IUser {
   password?: string;
   avatar?: string;
   role: UserRole;
+  isBlocked?: boolean;
   emailVerified: boolean;
   emailVerificationTokenHash?: string;
   emailVerificationCodeHash?: string;
@@ -28,6 +29,7 @@ const userSchema = new Schema<IUser>(
       enum: USER_ROLES,
       default: "user",
     },
+    isBlocked: { type: Boolean, default: false, index: true },
     emailVerified: { type: Boolean, default: false, index: true },
     emailVerificationTokenHash: {
       type: String,

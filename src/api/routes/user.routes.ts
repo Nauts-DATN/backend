@@ -35,6 +35,24 @@ export function userRoutes(
     userController.getAvatar,
   );
   r.get(
+    "/",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.list,
+  );
+  r.patch(
+    "/:id/block",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.setBlocked,
+  );
+  r.delete(
+    "/:id",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.deleteById,
+  );
+  r.get(
     "/:id",
     auth.authenticate,
     auth.requireSelfOrAdmin("id"),

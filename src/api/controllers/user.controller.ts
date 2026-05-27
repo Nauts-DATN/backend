@@ -2,6 +2,15 @@ import type { Request, Response } from "express";
 import type { UserService } from "../../services/user.service.js";
 import { sendOk, sendFail } from "../../utils/response.js";
 
+function handleUserErr(res: Response, e: unknown): void {
+  const err = e as Error & { status?: number };
+  if ([400, 403, 404].includes(err.status ?? 0)) {
+    sendFail(res, err.status!, err.message);
+    return;
+  }
+  throw e;
+}
+
 export class UserController {
   constructor(userService: UserService) {
     this.userService = userService;
@@ -9,8 +18,10 @@ export class UserController {
 
   private readonly userService: UserService;
 
-  list = async (_req: Request, res: Response): Promise<void> => {
-    const users = await this.userService.listUsers();
+  list = async (req: Request, res: Response): Promise<void> => {
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const users = await this.userService.listUsers(search);
     sendOk(res, users);
   };
 
@@ -110,6 +121,34 @@ export class UserController {
         return;
       }
       throw e;
+    }
+  };
+
+  setBlocked = async (req: Request, res: Response): Promise<void> => {
+    const { isBlocked } = req.body as { isBlocked?: boolean };
+    if (typeof isBlocked !== "boolean") {
+      sendFail(res, 400, "isBlocked phải là boolean");
+      return;
+    }
+
+    try {
+      const user = await this.userService.setUserBlocked(
+        req.params.id,
+        isBlocked,
+        req.auth!.userId,
+      );
+      sendOk(res, { user });
+    } catch (e) {
+      handleUserErr(res, e);
+    }
+  };
+
+  deleteById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      await this.userService.deleteUser(req.params.id, req.auth!.userId);
+      sendOk(res, { message: "Đã xóa user" });
+    } catch (e) {
+      handleUserErr(res, e);
     }
   };
 

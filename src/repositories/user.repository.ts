@@ -176,8 +176,38 @@ export class UserRepository {
     }).exec();
   }
 
-  async list(limit = 50): Promise<(IUser & { _id: Types.ObjectId })[]> {
-    const docs = await UserModel.find()
+  async setBlocked(
+    userId: string,
+    isBlocked: boolean,
+  ): Promise<(IUser & { _id: Types.ObjectId }) | null> {
+    const doc = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { isBlocked } },
+      { new: true },
+    )
+      .lean()
+      .exec();
+    return doc as (IUser & { _id: Types.ObjectId }) | null;
+  }
+
+  async deleteById(userId: string): Promise<boolean> {
+    const res = await UserModel.findByIdAndDelete(userId).exec();
+    return !!res;
+  }
+
+  async list(
+    limit = 50,
+    search?: string,
+  ): Promise<(IUser & { _id: Types.ObjectId })[]> {
+    const query = search?.trim()
+      ? {
+          $or: [
+            { name: { $regex: search.trim(), $options: "i" } },
+            { email: { $regex: search.trim(), $options: "i" } },
+          ],
+        }
+      : {};
+    const docs = await UserModel.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()

@@ -25,8 +25,8 @@ export class UserService {
   private readonly userRepository: UserRepository;
   private readonly s3Storage: S3StorageService;
 
-  async listUsers(): Promise<PublicUser[]> {
-    const rows = await this.userRepository.list();
+  async listUsers(search?: string): Promise<PublicUser[]> {
+    const rows = await this.userRepository.list(100, search);
     return rows.map((u) => toPublicUser(u));
   }
 
@@ -76,13 +76,7 @@ export class UserService {
 
   async uploadAvatar(userId: string, buffer: Buffer, contentType: string) {
     const user = await this.userRepository.findById(userId);
-    if (!user) {
-      const err = new Error("Không tìm thấy user") as Error & {
-        status?: number;
-      };
-      err.status = 404;
-      throw err;
-    }
+    if (!user) throw makeErr("Không tìm thấy user", 404);
 
     const ext = contentType.includes("png")
       ? "png"
@@ -110,5 +104,43 @@ export class UserService {
     if (!user) throw makeErr("Không tìm thấy user", 404);
     if (!user.avatar) throw makeErr("User chưa có avatar", 404);
     return this.s3Storage.getObject(user.avatar);
+  }
+
+  async setUserBlocked(
+    targetUserId: string,
+    isBlocked: boolean,
+    requesterId: string,
+  ): Promise<PublicUser> {
+    if (targetUserId === requesterId) {
+      throw makeErr("Không thể khóa tài khoản của chính mình", 400);
+    }
+
+    const target = await this.userRepository.findById(targetUserId);
+    if (!target) throw makeErr("Không tìm thấy user", 404);
+    if (target.role === "admin") {
+      throw makeErr("Không thể khóa tài khoản admin", 400);
+    }
+
+    const updated = await this.userRepository.setBlocked(targetUserId, isBlocked);
+    if (!updated) throw makeErr("Không tìm thấy user", 404);
+    return toPublicUser(updated);
+  }
+
+  async deleteUser(targetUserId: string, requesterId: string): Promise<void> {
+    if (targetUserId === requesterId) {
+      throw makeErr("Không thể xóa tài khoản của chính mình", 400);
+    }
+
+    const target = await this.userRepository.findById(targetUserId);
+    if (!target) throw makeErr("Không tìm thấy user", 404);
+    if (target.role === "admin") {
+      throw makeErr("Không thể xóa tài khoản admin", 400);
+    }
+    if (target.avatar) {
+      await this.s3Storage.deleteObject(target.avatar).catch(() => undefined);
+    }
+
+    const ok = await this.userRepository.deleteById(targetUserId);
+    if (!ok) throw makeErr("Không tìm thấy user", 404);
   }
 }

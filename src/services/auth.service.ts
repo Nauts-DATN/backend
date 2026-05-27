@@ -109,6 +109,14 @@ export class AuthService {
       throw err;
     }
 
+    if (user.isBlocked) {
+      const err = new Error("Tài khoản đã bị khóa") as Error & {
+        status?: number;
+      };
+      err.status = 403;
+      throw err;
+    }
+
     const { password: _p, ...withoutPassword } = user;
     const accessToken = this.jwtService.sign(
       user._id.toString(),

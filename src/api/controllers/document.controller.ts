@@ -52,7 +52,7 @@ export class DocumentController {
   list = async (req: Request, res: Response): Promise<void> => {
     const docs = await this.documentService.list(
       req.auth!.userId,
-      req.auth!.role,
+      // req.auth!.role,
       {
         search: readOptionalQuery(req.query.search),
         category: readOptionalQuery(req.query.category ?? req.query.categoryId),
