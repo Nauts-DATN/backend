@@ -3,6 +3,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  PutBucketPolicyCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -32,8 +33,12 @@ export class S3StorageService {
   }
 
   getPublicBaseUrl(): string {
-    const base = env.s3.endpoint.replace(/\/$/, "");
+    const base = (env.s3.publicUrl ?? env.s3.endpoint).replace(/\/$/, "");
     return `${base}/${this.bucket}`;
+  }
+
+  getPublicObjectUrl(key: string): string {
+    return `${this.getPublicBaseUrl()}/${key}`;
   }
 
   async ensureBucketAccessible(): Promise<void> {
@@ -47,6 +52,30 @@ export class S3StorageService {
     } catch {
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
     }
+    if (env.s3.publicUrl) {
+      await this.ensurePublicReadPolicy();
+    }
+  }
+
+  async ensurePublicReadPolicy(): Promise<void> {
+    const policy = {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Principal: "*",
+          Action: ["s3:GetObject"],
+          Resource: [`arn:aws:s3:::${this.bucket}/*`],
+        },
+      ],
+    };
+
+    await this.client.send(
+      new PutBucketPolicyCommand({
+        Bucket: this.bucket,
+        Policy: JSON.stringify(policy),
+      }),
+    );
   }
 
   async putObject(
@@ -76,6 +105,9 @@ export class S3StorageService {
    * @param expiresIn - Thời gian hiệu lực tính bằng giây (mặc định 15 phút)
    */
   async getPresignedUrl(key: string, expiresIn = 900): Promise<string> {
+    if (env.s3.publicUrl) {
+      return this.getPublicObjectUrl(key);
+    }
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
     return getSignedUrl(this.client, command, { expiresIn });
   }

@@ -1,0 +1,28 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - nauts_net
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    networks:
+      - nauts_net
+
+networks:
+  nauts_net:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  minio_data:

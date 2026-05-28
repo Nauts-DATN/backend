@@ -8,6 +8,11 @@ function required(name: string): string {
   return v;
 }
 
+function optionalUrl(name: string): string | undefined {
+  const value = process.env[name]?.trim().replace(/\/$/, "");
+  return value || undefined;
+}
+
 const port = Number(process.env.PORT) || 4000;
 
 export const env = {
@@ -46,6 +51,7 @@ export const env = {
     expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
   },
   s3: {
+    publicUrl: optionalUrl("S3_PUBLIC_URL"),
     endpoint: required("S3_ENDPOINT"),
     region: process.env.S3_REGION ?? "us-east-1",
     accessKeyId: required("S3_ACCESS_KEY"),
