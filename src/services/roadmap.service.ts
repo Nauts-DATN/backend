@@ -127,7 +127,6 @@ export class RoadmapService {
     if (!doc) throw makeErr("Không tìm thấy document", 404);
     if (
       requesterRole !== "admin" &&
-      !doc.isPublic &&
       doc.uploadedBy.toString() !== requesterId
     ) {
       throw makeErr("Không có quyền gắn document này", 403);

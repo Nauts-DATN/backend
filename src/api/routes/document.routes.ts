@@ -26,7 +26,6 @@ export function documentRoutes(
   );
 
   r.get("/", auth.authenticate, documentController.list);
-  r.get("/community", auth.authenticate, documentController.listCommunity);
 
   r.get("/:id", auth.authenticate, documentController.getById);
 
@@ -36,8 +35,6 @@ export function documentRoutes(
 
   r.delete("/:id", auth.authenticate, documentController.deleteById);
   // Hỗ trợ PATCH trực tiếp theo id (phù hợp swagger cũ)
-  r.patch("/:id", auth.authenticate, documentController.setVisibility);
-  r.patch("/:id/visibility", auth.authenticate, documentController.setVisibility);
 
   /** Lấy ghi chú của document. */
   r.get("/:id/note", auth.authenticate, noteController.getByDocument);

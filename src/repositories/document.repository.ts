@@ -4,7 +4,6 @@ import { DocumentModel, type IDocument } from "../models/document.model.js";
 export type CreateDocumentInput = {
   title: string;
   description?: string;
-  isPublic?: boolean;
   uploadedBy: string;
   category?: string;
   course?: string;
@@ -16,7 +15,6 @@ export type CreateDocumentInput = {
 
 export type FindDocumentsOptions = {
   uploadedBy?: string;
-  isPublic?: boolean;
   search?: string;
   category?: string;
   course?: string;
@@ -42,7 +40,6 @@ export class DocumentRepository {
     const filter: Record<string, unknown> = {};
 
     if (options.uploadedBy) filter.uploadedBy = options.uploadedBy;
-    if (options.isPublic !== undefined) filter.isPublic = options.isPublic;
     if (options.category) filter.category = options.category;
     if (options.course) filter.course = options.course;
     if (search) filter.title = { $regex: search, $options: "i" };
@@ -63,22 +60,6 @@ export class DocumentRepository {
   /** Lấy document theo người upload. */
   async findByUser(userId: string, limit = 100): Promise<DocumentDoc[]> {
     return this.findMany({ uploadedBy: userId, limit });
-  }
-
-  /** Lấy tài liệu public cho cộng đồng. */
-  async findPublic(options?: {
-    search?: string;
-    category?: string;
-    course?: string;
-    limit?: number;
-  }): Promise<DocumentDoc[]> {
-    return this.findMany({
-      isPublic: true,
-      search: options?.search,
-      category: options?.category,
-      course: options?.course,
-      limit: options?.limit,
-    });
   }
 
   /** Lấy theo category. */
@@ -103,21 +84,7 @@ export class DocumentRepository {
     return doc as DocumentDoc | null;
   }
 
-  /** Đổi trạng thái public/private của document. */
-  async setVisibility(
-    id: string,
-    isPublic: boolean,
-  ): Promise<DocumentDoc | null> {
-    const doc = await DocumentModel.findByIdAndUpdate(
-      id,
-      { isPublic },
-      { new: true },
-    )
-      .lean()
-      .exec();
-    return doc as DocumentDoc | null;
-  }
-
+  /** Xóa document theo ID. */
   async deleteById(id: string): Promise<boolean> {
     const r = await DocumentModel.findByIdAndDelete(id).exec();
     return !!r;

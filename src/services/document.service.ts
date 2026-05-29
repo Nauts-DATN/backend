@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
+import type { Types } from "mongoose";
+import type { IDocument } from "../models/document.model.js";
 import type { DocumentRepository } from "../repositories/document.repository.js";
 import type { NoteRepository } from "../repositories/note.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
 import type { PdfConverterService } from "./pdf-converter.service.js";
-import type { IDocument } from "../models/document.model.js";
-import type { Types } from "mongoose";
 
 const DEFAULT_PRESIGNED_EXPIRES = 1500;
 
@@ -14,21 +14,16 @@ export type PublicDocument = {
   id: string;
   title: string;
   description?: string;
-  isPublic: boolean;
   uploadedBy: string;
   category?: string;
   course?: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
-  /** URL tĩnh S3/MinIO (public bucket). */
   downloadUrl: string;
-  /** Presigned URL tạm thời để tải file trực tiếp từ S3 (hết hạn sau `presignedExpiresIn` giây). */
   presignedUrl: string;
   presignedExpiresIn: number;
-  /** Bản tóm tắt AI (null nếu chưa tóm tắt). */
   summary: string | null;
-  /** Thời điểm tóm tắt lần cuối (null nếu chưa tóm tắt). */
   summarizedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -40,7 +35,6 @@ export type UploadDocumentInput = {
   uploadedBy: string;
   category?: string;
   course?: string;
-  isPublic?: boolean;
   buffer: Buffer;
   originalName: string;
   mimeType: string;
@@ -88,7 +82,6 @@ export class DocumentService {
       id: doc._id.toString(),
       title: doc.title,
       description: doc.description,
-      isPublic: doc.isPublic,
       uploadedBy: doc.uploadedBy.toString(),
       category: doc.category?.toString(),
       course: doc.course?.toString(),
@@ -106,14 +99,13 @@ export class DocumentService {
   }
 
   async upload(input: UploadDocumentInput): Promise<PublicDocument> {
-    // Tự động convert DOCX → PDF trước khi lưu
     if (this.pdfConverterService.isDocxFile(input.mimeType, input.originalName)) {
       try {
         input.buffer = await this.pdfConverterService.convertDocxToPdf(input.buffer);
         input.originalName = input.originalName.replace(/\.docx$/i, ".pdf");
         input.mimeType = "application/pdf";
       } catch (err) {
-        console.error("[DocumentService] DOCX→PDF failed, storing original:", err);
+        console.error("[DocumentService] DOCX to PDF failed, storing original:", err);
       }
     }
 
@@ -125,7 +117,6 @@ export class DocumentService {
     const doc = await this.documentRepository.create({
       title: input.title,
       description: input.description,
-      isPublic: input.isPublic ?? false,
       uploadedBy: input.uploadedBy,
       category: input.category,
       course: input.course,
@@ -140,11 +131,9 @@ export class DocumentService {
 
   async list(
     requesterId: string,
-    // requesterRole: string,
     filters: DocumentListFilters = {},
   ): Promise<PublicDocument[]> {
     const docs = await this.documentRepository.findMany({
-      // uploadedBy: requesterRole === "admin" ? undefined : requesterId,
       uploadedBy: requesterId,
       search: filters.search,
       category: filters.category,
@@ -160,14 +149,13 @@ export class DocumentService {
     requesterRole: string,
   ): Promise<PublicDocument> {
     const doc = await this.documentRepository.findById(id);
-    if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
-      throw makeErr("Không có quyền", 403);
+    if (!doc) throw makeErr("Khong tim thay document", 404);
+    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
+      throw makeErr("Khong co quyen", 403);
     }
     return this.toPublic(doc);
   }
 
-  /** Tạo presigned URL riêng với thời gian tuỳ chỉnh. */
   async getPresignedUrl(
     id: string,
     requesterId: string,
@@ -175,15 +163,14 @@ export class DocumentService {
     expiresIn = DEFAULT_PRESIGNED_EXPIRES,
   ): Promise<{ url: string; fileName: string; expiresIn: number }> {
     const doc = await this.documentRepository.findById(id);
-    if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
-      throw makeErr("Không có quyền", 403);
+    if (!doc) throw makeErr("Khong tim thay document", 404);
+    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
+      throw makeErr("Khong co quyen", 403);
     }
     const url = await this.s3Storage.getPresignedUrl(doc.fileKey, expiresIn);
     return { url, fileName: doc.fileName, expiresIn };
   }
 
-  /** Trả về stream để download file trực tiếp qua backend. */
   async getStream(
     id: string,
     requesterId: string,
@@ -195,9 +182,9 @@ export class DocumentService {
     fileName: string;
   }> {
     const doc = await this.documentRepository.findById(id);
-    if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (requesterRole !== "admin" && !doc.isPublic && doc.uploadedBy.toString() !== requesterId) {
-      throw makeErr("Không có quyền", 403);
+    if (!doc) throw makeErr("Khong tim thay document", 404);
+    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
+      throw makeErr("Khong co quyen", 403);
     }
     const { body, contentType, contentLength } =
       await this.s3Storage.getObject(doc.fileKey);
@@ -210,12 +197,9 @@ export class DocumentService {
     requesterRole: string,
   ): Promise<void> {
     const doc = await this.documentRepository.findById(id);
-    if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (
-      requesterRole !== "admin" &&
-      doc.uploadedBy.toString() !== requesterId
-    ) {
-      throw makeErr("Không có quyền", 403);
+    if (!doc) throw makeErr("Khong tim thay document", 404);
+    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
+      throw makeErr("Khong co quyen", 403);
     }
     await this.s3Storage.deleteObject(doc.fileKey).catch(() => undefined);
     await Promise.all([
@@ -223,33 +207,5 @@ export class DocumentService {
       this.quizRepository.deleteByDocument(id),
     ]);
     await this.documentRepository.deleteById(id);
-  }
-
-  /** Danh sách tài liệu public cho cộng đồng. */
-  async listCommunity(filters: DocumentListFilters = {}): Promise<PublicDocument[]> {
-    const docs = await this.documentRepository.findPublic({
-      search: filters.search,
-      category: filters.category,
-      course: filters.course,
-      limit: 200,
-    });
-    return Promise.all(docs.map((d) => this.toPublic(d)));
-  }
-
-  /** Chủ sở hữu/admin đổi trạng thái public/private. */
-  async setVisibility(
-    id: string,
-    isPublic: boolean,
-    requesterId: string,
-    requesterRole: string,
-  ): Promise<PublicDocument> {
-    const doc = await this.documentRepository.findById(id);
-    if (!doc) throw makeErr("Không tìm thấy document", 404);
-    if (requesterRole !== "admin" && doc.uploadedBy.toString() !== requesterId) {
-      throw makeErr("Không có quyền", 403);
-    }
-    const updated = await this.documentRepository.setVisibility(id, isPublic);
-    if (!updated) throw makeErr("Cập nhật trạng thái thất bại", 500);
-    return this.toPublic(updated);
   }
 }

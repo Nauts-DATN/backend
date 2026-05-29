@@ -772,12 +772,6 @@ export const openApiSpec = {
                     description: "ObjectId của Course (tuỳ chọn)",
                     example: "674a000000000000000000cc",
                   },
-                  isPublic: {
-                    type: "boolean",
-                    description:
-                      "Public lên cộng đồng hay không (mặc định false)",
-                    example: false,
-                  },
                 },
               },
             },
@@ -826,51 +820,6 @@ export const openApiSpec = {
         description:
           "User thường chỉ thấy tài liệu của **chính mình**. **Admin** thấy tất cả.",
         operationId: "listDocuments",
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: "search",
-            in: "query",
-            required: false,
-            schema: { type: "string" },
-            description: "Từ khóa tìm theo tiêu đề",
-          },
-          {
-            name: "category",
-            in: "query",
-            required: false,
-            schema: { type: "string" },
-            description: "Lọc theo Category ObjectId",
-          },
-          {
-            name: "course",
-            in: "query",
-            required: false,
-            schema: { type: "string" },
-            description: "Lọc theo Course ObjectId",
-          },
-        ],
-        responses: {
-          "200": {
-            description: "OK",
-            content: {
-              "application/json": {
-                schema: wrap({ $ref: "#/components/schemas/DocumentListData" }),
-              },
-            },
-          },
-          "401": { description: "Thiếu hoặc sai token", content: errContent() },
-          "500": { $ref: "#/components/responses/InternalError" },
-        },
-      },
-    },
-    "/documents/community": {
-      get: {
-        tags: ["documents"],
-        summary: "Danh sách tài liệu cộng đồng",
-        description:
-          "Trả tất cả tài liệu có `isPublic=true`. Hỗ trợ query `search` để tìm theo tiêu đề.",
-        operationId: "listCommunityDocuments",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -965,48 +914,6 @@ export const openApiSpec = {
               },
             },
           },
-          "401": { description: "Thiếu hoặc sai token", content: errContent() },
-          "403": { description: "Không có quyền", content: errContent() },
-          "404": { description: "Không tìm thấy document", content: errContent() },
-          "500": { $ref: "#/components/responses/InternalError" },
-        },
-      },
-      patch: {
-        tags: ["documents"],
-        summary: "Đổi trạng thái public/private của tài liệu",
-        description: "Chỉ **owner** hoặc **admin** được đổi `isPublic`.",
-        operationId: "setDocumentVisibility",
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["isPublic"],
-                properties: { isPublic: { type: "boolean", example: true } },
-              },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Cập nhật thành công",
-            content: {
-              "application/json": {
-                schema: wrap({ $ref: "#/components/schemas/DocumentData" }),
-              },
-            },
-          },
-          "400": { description: "Thiếu hoặc sai isPublic", content: errContent() },
           "401": { description: "Thiếu hoặc sai token", content: errContent() },
           "403": { description: "Không có quyền", content: errContent() },
           "404": { description: "Không tìm thấy document", content: errContent() },
@@ -2194,16 +2101,10 @@ export const openApiSpec = {
       // ── document ─────────────────────────────────────────────────────────────
       DocumentPublic: {
         type: "object",
-        description: "Metadata của một document",
         properties: {
           id: { type: "string", example: "674a1b2c3d4e5f6789abcdef" },
-          title: { type: "string", example: "Báo cáo tháng 1" },
-          description: { type: "string", nullable: true, example: "Mô tả ngắn" },
-          isPublic: {
-            type: "boolean",
-            description: "Tài liệu có public lên cộng đồng hay không",
-            example: false,
-          },
+          title: { type: "string", example: "Bao cao thang 1" },
+          description: { type: "string", nullable: true, example: "Mo ta ngan" },
           uploadedBy: {
             type: "string",
             description: "userId (ObjectId string)",
