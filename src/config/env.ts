@@ -23,6 +23,9 @@ export const env = {
   apiPublicUrl:
     process.env.PUBLIC_API_URL?.replace(/\/$/, "") ??
     `http://localhost:${port}`,
+  frontendPublicUrl:
+    process.env.FRONTEND_PUBLIC_URL?.replace(/\/$/, "") ??
+    "http://localhost:3000",
   mail: {
     from: process.env.EMAIL_FROM ?? "EduAI <noreply@localhost>",
     smtpHost: process.env.SMTP_HOST?.trim() || "",

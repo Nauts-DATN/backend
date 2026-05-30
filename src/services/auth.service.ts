@@ -66,7 +66,7 @@ export class AuthService {
       emailVerificationExpires: expires,
     });
 
-    const verifyUrl = `${env.apiPublicUrl}/api/auth/verify-email?token=${encodeURIComponent(plainToken)}`;
+    const verifyUrl = `${env.frontendPublicUrl}/verify-email?token=${encodeURIComponent(plainToken)}`;
     await this.emailService.sendVerificationEmail(
       created.email,
       verifyUrl,
@@ -244,7 +244,7 @@ export class AuthService {
       expires,
     });
 
-    const verifyUrl = `${env.apiPublicUrl}/api/auth/verify-email?token=${encodeURIComponent(plainToken)}`;
+    const verifyUrl = `${env.frontendPublicUrl}/verify-email?token=${encodeURIComponent(plainToken)}`;
     await this.emailService.sendVerificationEmail(
       user.email,
       verifyUrl,
