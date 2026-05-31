@@ -171,6 +171,44 @@ export class UserRepository {
     return doc as (IUser & { _id: Types.ObjectId }) | null;
   }
 
+  async setPasswordResetData(
+    userId: string,
+    data: {
+      codeHash: string;
+      expires: Date;
+    },
+  ): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      $set: {
+        passwordResetCodeHash: data.codeHash,
+        passwordResetExpires: data.expires,
+      },
+    }).exec();
+  }
+
+  async findByEmailWithPasswordResetCode(
+    email: string,
+  ): Promise<
+    | (IUser & {
+        _id: Types.ObjectId;
+        passwordResetCodeHash?: string;
+        passwordResetExpires?: Date;
+      })
+    | null
+  > {
+    const doc = await UserModel.findOne({ email: email.toLowerCase() })
+      .select("+passwordResetCodeHash +passwordResetExpires")
+      .lean()
+      .exec();
+    return doc as
+      | (IUser & {
+          _id: Types.ObjectId;
+          passwordResetCodeHash?: string;
+          passwordResetExpires?: Date;
+        })
+      | null;
+  }
+
   async updateName(
     userId: string,
     name: string,
@@ -188,6 +226,17 @@ export class UserRepository {
   async updatePassword(userId: string, password: string): Promise<void> {
     await UserModel.findByIdAndUpdate(userId, {
       $set: { password },
+    }).exec();
+  }
+
+  async updatePasswordAndClearReset(userId: string, password: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      $set: { password },
+      $unset: {
+        passwordResetCodeHash: 1,
+        passwordResetExpires: 1,
+        refreshTokenHash: 1,
+      },
     }).exec();
   }
 

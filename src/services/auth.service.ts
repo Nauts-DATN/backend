@@ -338,4 +338,92 @@ export class AuthService {
       plainCode,
     );
   }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const emailNorm = email?.trim().toLowerCase();
+    if (!emailNorm) {
+      const err = new Error("Thiếu email") as Error & { status?: number };
+      err.status = 400;
+      throw err;
+    }
+
+    const user = await this.userRepository.findByEmail(emailNorm);
+    if (!user || user.isBlocked) {
+      return;
+    }
+
+    const plainCode = generateVerificationCode();
+    const codeHash = hashVerificationCode(plainCode);
+    const expires = new Date(
+      Date.now() + env.mail.passwordResetExpiresMinutes * 60 * 1000,
+    );
+
+    await this.userRepository.setPasswordResetData(user._id.toString(), {
+      codeHash,
+      expires,
+    });
+    await this.emailService.sendPasswordResetEmail(user.email, plainCode);
+  }
+
+  async resetPasswordWithCode(
+    email: string,
+    codeRaw: string,
+    newPassword: string,
+  ): Promise<void> {
+    const emailNorm = email?.trim().toLowerCase();
+    const code = normalizeVerificationCode(codeRaw ?? "");
+    if (!emailNorm) {
+      const err = new Error("Thiếu email") as Error & { status?: number };
+      err.status = 400;
+      throw err;
+    }
+    if (code.length !== 6) {
+      const err = new Error("Mã phải gồm 6 chữ số") as Error & { status?: number };
+      err.status = 400;
+      throw err;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      const err = new Error("Mật khẩu mới phải có ít nhất 6 ký tự") as Error & {
+        status?: number;
+      };
+      err.status = 400;
+      throw err;
+    }
+
+    const user = await this.userRepository.findByEmailWithPasswordResetCode(
+      emailNorm,
+    );
+    if (!user?.passwordResetCodeHash) {
+      const err = new Error("Email hoặc mã không đúng") as Error & {
+        status?: number;
+      };
+      err.status = 400;
+      throw err;
+    }
+    if (
+      user.passwordResetExpires &&
+      user.passwordResetExpires.getTime() < Date.now()
+    ) {
+      const err = new Error("Mã đã hết hạn. Vui lòng gửi lại mã.") as Error & {
+        status?: number;
+      };
+      err.status = 400;
+      throw err;
+    }
+
+    const codeHash = hashVerificationCode(code);
+    if (!safeEqualHex(codeHash, user.passwordResetCodeHash)) {
+      const err = new Error("Mã không đúng") as Error & {
+        status?: number;
+      };
+      err.status = 400;
+      throw err;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.userRepository.updatePasswordAndClearReset(
+      user._id.toString(),
+      passwordHash,
+    );
+  }
 }

@@ -165,6 +165,46 @@ export class AuthController {
     });
   };
 
+  forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    const { email } = req.body as { email?: string };
+    if (!email) {
+      sendFail(res, 400, "Thiáº¿u email");
+      return;
+    }
+    await this.authService.requestPasswordReset(email);
+    sendOk(res, {
+      message:
+        "Náº¿u email tá»“n táº¡i, chÃºng tÃ´i Ä‘Ã£ gá»­i mÃ£ Ä‘áº·t láº¡i máº­t kháº©u.",
+    });
+  };
+
+  resetPassword = async (req: Request, res: Response): Promise<void> => {
+    const { email, code, newPassword } = req.body as {
+      email?: string;
+      code?: string;
+      newPassword?: string;
+    };
+    if (!email || code === undefined || code === "" || !newPassword) {
+      sendFail(res, 400, "Thiáº¿u email, mÃ£ hoáº·c máº­t kháº©u má»›i");
+      return;
+    }
+    try {
+      await this.authService.resetPasswordWithCode(
+        email,
+        String(code),
+        newPassword,
+      );
+      sendOk(res, { message: "ÄÃ£ Ä‘áº·t láº¡i máº­t kháº©u" });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status === 400) {
+        sendFail(res, 400, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
   me = async (req: Request, res: Response): Promise<void> => {
     const userId = req.auth?.userId;
     if (!userId) {

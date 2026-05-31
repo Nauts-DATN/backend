@@ -35,6 +35,8 @@ export const env = {
     smtpPass: process.env.SMTP_PASS || undefined,
     verificationExpiresHours:
       Number(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS) || 24,
+    passwordResetExpiresMinutes:
+      Number(process.env.PASSWORD_RESET_EXPIRES_MINUTES) || 15,
   },
   db: {
     /** Chạy pending migrations ngay sau khi connect (server hoặc CLI) */

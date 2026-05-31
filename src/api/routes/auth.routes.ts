@@ -14,6 +14,8 @@ export function authRoutes(
   r.get("/verify-email", authController.verifyEmail);
   r.post("/verify-email-code", authController.verifyEmailCode);
   r.post("/resend-verification", authController.resendVerification);
+  r.post("/forgot-password", authController.forgotPassword);
+  r.post("/reset-password", authController.resetPassword);
   r.get("/me", authMiddleware.authenticate, authController.me);
   return r;
 }
