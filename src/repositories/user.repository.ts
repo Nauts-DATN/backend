@@ -18,6 +18,21 @@ export class UserRepository {
     return doc as (IUser & { _id: Types.ObjectId }) | null;
   }
 
+  async findByIdWithRefreshToken(
+    id: string,
+  ): Promise<
+    | (IUser & { _id: Types.ObjectId; refreshTokenHash?: string })
+    | null
+  > {
+    const doc = await UserModel.findById(id)
+      .select("+refreshTokenHash")
+      .lean()
+      .exec();
+    return doc as
+      | (IUser & { _id: Types.ObjectId; refreshTokenHash?: string })
+      | null;
+  }
+
   async findByEmail(email: string): Promise<(IUser & { _id: Types.ObjectId }) | null> {
     const doc = await UserModel.findOne({ email: email.toLowerCase() })
       .lean()
@@ -173,6 +188,18 @@ export class UserRepository {
   async updatePassword(userId: string, password: string): Promise<void> {
     await UserModel.findByIdAndUpdate(userId, {
       $set: { password },
+    }).exec();
+  }
+
+  async setRefreshTokenHash(userId: string, refreshTokenHash: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      $set: { refreshTokenHash },
+    }).exec();
+  }
+
+  async clearRefreshTokenHash(userId: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      $unset: { refreshTokenHash: 1 },
     }).exec();
   }
 

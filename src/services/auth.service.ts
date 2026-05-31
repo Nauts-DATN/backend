@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { createHash } from "node:crypto";
 import { env } from "../config/env.js";
 import type { UserRepository } from "../repositories/user.repository.js";
 import type { JwtService } from "./jwt.service.js";
@@ -15,6 +16,10 @@ import {
 } from "../utils/email-verification-token.js";
 
 const SALT_ROUNDS = 10;
+
+function hashRefreshToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export class AuthService {
   constructor(
@@ -82,7 +87,7 @@ export class AuthService {
   async login(
     email: string,
     password: string,
-  ): Promise<{ user: PublicUser; accessToken: string }> {
+  ): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> {
     const user = await this.userRepository.findByEmailWithPassword(email);
     if (!user?.password) {
       const err = new Error("Email hoặc mật khẩu không đúng") as Error & {
@@ -122,10 +127,92 @@ export class AuthService {
       user._id.toString(),
       user.role,
     );
+    const refreshToken = this.jwtService.signRefresh(
+      user._id.toString(),
+      user.role,
+    );
+    await this.userRepository.setRefreshTokenHash(
+      user._id.toString(),
+      hashRefreshToken(refreshToken),
+    );
     return {
       user: toPublicUser(withoutPassword),
       accessToken,
+      refreshToken,
     };
+  }
+
+  async refresh(
+    refreshToken: string,
+  ): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> {
+    const token = refreshToken?.trim();
+    if (!token) {
+      const err = new Error("Thiáº¿u refresh token") as Error & { status?: number };
+      err.status = 400;
+      throw err;
+    }
+
+    let payload: ReturnType<JwtService["verifyRefresh"]>;
+    try {
+      payload = this.jwtService.verifyRefresh(token);
+    } catch {
+      const err = new Error("Refresh token khÃ´ng há»£p lá»‡ hoáº·c háº¿t háº¡n") as Error & {
+        status?: number;
+      };
+      err.status = 401;
+      throw err;
+    }
+
+    const user = await this.userRepository.findByIdWithRefreshToken(payload.sub);
+    if (!user || !user.refreshTokenHash) {
+      const err = new Error("Refresh token khÃ´ng há»£p lá»‡") as Error & {
+        status?: number;
+      };
+      err.status = 401;
+      throw err;
+    }
+    if (user.isBlocked) {
+      const err = new Error("TÃ i khoáº£n Ä‘Ã£ bá»‹ khÃ³a") as Error & {
+        status?: number;
+      };
+      err.status = 403;
+      throw err;
+    }
+    if (hashRefreshToken(token) !== user.refreshTokenHash) {
+      await this.userRepository.clearRefreshTokenHash(user._id.toString());
+      const err = new Error("Refresh token khÃ´ng há»£p lá»‡") as Error & {
+        status?: number;
+      };
+      err.status = 401;
+      throw err;
+    }
+
+    const accessToken = this.jwtService.sign(user._id.toString(), user.role);
+    const nextRefreshToken = this.jwtService.signRefresh(user._id.toString(), user.role);
+    await this.userRepository.setRefreshTokenHash(
+      user._id.toString(),
+      hashRefreshToken(nextRefreshToken),
+    );
+
+    return {
+      user: toPublicUser(user),
+      accessToken,
+      refreshToken: nextRefreshToken,
+    };
+  }
+
+  async logout(refreshToken?: string): Promise<void> {
+    const token = refreshToken?.trim();
+    if (!token) return;
+    try {
+      const payload = this.jwtService.verifyRefresh(token);
+      const user = await this.userRepository.findByIdWithRefreshToken(payload.sub);
+      if (user?.refreshTokenHash === hashRefreshToken(token)) {
+        await this.userRepository.clearRefreshTokenHash(user._id.toString());
+      }
+    } catch {
+      return;
+    }
   }
 
   async verifyEmail(token: string): Promise<void> {

@@ -9,6 +9,8 @@ export function authRoutes(
   const r = Router();
   r.post("/register", authController.register);
   r.post("/login", authController.login);
+  r.post("/refresh", authController.refresh);
+  r.post("/logout", authController.logout);
   r.get("/verify-email", authController.verifyEmail);
   r.post("/verify-email-code", authController.verifyEmailCode);
   r.post("/resend-verification", authController.resendVerification);

@@ -51,7 +51,9 @@ export const env = {
   },
   jwt: {
     secret: required("JWT_SECRET"),
-    expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+    expiresIn: process.env.JWT_EXPIRES_IN ?? "15m",
+    refreshSecret: process.env.JWT_REFRESH_SECRET ?? required("JWT_SECRET"),
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? "7d",
   },
   s3: {
     publicUrl: optionalUrl("S3_PUBLIC_URL"),

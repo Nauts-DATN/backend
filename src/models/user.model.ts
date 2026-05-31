@@ -14,6 +14,7 @@ export interface IUser {
   emailVerificationTokenHash?: string;
   emailVerificationCodeHash?: string;
   emailVerificationExpires?: Date;
+  refreshTokenHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,12 @@ const userSchema = new Schema<IUser>(
       select: false,
     },
     emailVerificationExpires: { type: Date, select: false },
+    refreshTokenHash: {
+      type: String,
+      select: false,
+      index: true,
+      sparse: true,
+    },
   },
   { timestamps: true },
 );

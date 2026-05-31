@@ -63,11 +63,11 @@ export class AuthController {
       return;
     }
     try {
-      const { user, accessToken } = await this.authService.login(
+      const { user, accessToken, refreshToken } = await this.authService.login(
         email,
         password,
       );
-      sendOk(res, { user, accessToken });
+      sendOk(res, { user, accessToken, refreshToken });
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.status === 401) {
@@ -80,6 +80,31 @@ export class AuthController {
       }
       throw e;
     }
+  };
+
+  refresh = async (req: Request, res: Response): Promise<void> => {
+    const { refreshToken } = req.body as { refreshToken?: string };
+    if (!refreshToken) {
+      sendFail(res, 400, "Thiáº¿u refresh token");
+      return;
+    }
+    try {
+      const result = await this.authService.refresh(refreshToken);
+      sendOk(res, result);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status === 400 || err.status === 401 || err.status === 403) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  logout = async (req: Request, res: Response): Promise<void> => {
+    const { refreshToken } = req.body as { refreshToken?: string };
+    await this.authService.logout(refreshToken);
+    sendOk(res, { message: "ÄÃ£ Ä‘Äƒng xuáº¥t" });
   };
 
   verifyEmail = async (req: Request, res: Response): Promise<void> => {
