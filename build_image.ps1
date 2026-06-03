@@ -1,0 +1,1 @@
+docker build -t nauts-backend:latest -f Dockerfile .

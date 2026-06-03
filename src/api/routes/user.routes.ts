@@ -1,19 +1,67 @@
 import { Router } from "express";
 import multer from "multer";
 import type { UserController } from "../controllers/user.controller.js";
+import type { AuthMiddleware } from "../../middleware/auth.middleware.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-export function userRoutes(userController: UserController): Router {
+export function userRoutes(
+  userController: UserController,
+  auth: AuthMiddleware,
+): Router {
   const r = Router();
-  r.get("/", userController.list);
-  r.post("/", userController.create);
-  r.get("/:id", userController.getById);
+
+  r.patch(
+    "/update-name",
+    auth.authenticate,
+    userController.updateName,
+  );
+  r.patch(
+    "/update-password",
+    auth.authenticate,
+    userController.updatePassword,
+  );
+  r.patch(
+    "/update-avatar",
+    auth.authenticate,
+    upload.single("avatar"),
+    userController.updateAvatar,
+  );
+  r.get(
+    "/:id/avatar",
+    userController.getAvatar,
+  );
+  r.get(
+    "/",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.list,
+  );
+  r.patch(
+    "/:id/block",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.setBlocked,
+  );
+  r.delete(
+    "/:id",
+    auth.authenticate,
+    auth.requireRoles("admin"),
+    userController.deleteById,
+  );
+  r.get(
+    "/:id",
+    auth.authenticate,
+    auth.requireSelfOrAdmin("id"),
+    userController.getById,
+  );
   r.post(
     "/:id/avatar",
+    auth.authenticate,
+    auth.requireSelfOrAdmin("id"),
     upload.single("file"),
     userController.uploadAvatar,
   );

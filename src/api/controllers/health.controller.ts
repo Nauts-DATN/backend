@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import type { HealthService } from "../../services/health.service.js";
+import { sendOk, sendFail } from "../../utils/response.js";
 
 export class HealthController {
   constructor(healthService: HealthService) {
@@ -11,6 +12,10 @@ export class HealthController {
   get = async (_req: Request, res: Response): Promise<void> => {
     const status = await this.healthService.getStatus();
     const ok = status.mongo === "ok" && status.s3 === "ok";
-    res.status(ok ? 200 : 503).json({ ok, ...status });
+    if (ok) {
+      sendOk(res, status);
+    } else {
+      sendFail(res, 503, { ...status });
+    }
   };
 }
