@@ -1,9 +1,16 @@
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, extname, join } from "node:path";
+import { promisify } from "node:util";
 import mammoth from "mammoth";
 import puppeteer from "puppeteer-core";
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOC_MIME = "application/msword";
+const execFileAsync = promisify(execFile);
 
 /** Danh sách đường dẫn Chrome/Chromium phổ biến theo nền tảng. */
 const CHROME_PATHS: string[] = [
@@ -22,6 +29,14 @@ const CHROME_PATHS: string[] = [
   "/Applications/Chromium.app/Contents/MacOS/Chromium",
 ];
 
+const LIBREOFFICE_PATHS: string[] = [
+  "/usr/bin/soffice",
+  "/usr/bin/libreoffice",
+  "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
+  "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
+  "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+];
+
 function findChrome(): string {
   const fromEnv = process.env.CHROME_EXECUTABLE_PATH;
   if (fromEnv) return fromEnv;
@@ -31,6 +46,20 @@ function findChrome(): string {
     throw new Error(
       "Không tìm thấy Chrome/Chromium để convert PDF. " +
         "Đặt biến môi trường CHROME_EXECUTABLE_PATH để chỉ đường dẫn.",
+    );
+  }
+  return found;
+}
+
+function findLibreOffice(): string {
+  const fromEnv = process.env.LIBREOFFICE_EXECUTABLE_PATH;
+  if (fromEnv) return fromEnv;
+
+  const found = LIBREOFFICE_PATHS.find((p) => existsSync(p));
+  if (!found) {
+    throw new Error(
+      "Khong tim thay LibreOffice de convert DOC sang PDF. " +
+        "Dat bien moi truong LIBREOFFICE_EXECUTABLE_PATH de chi duong dan.",
     );
   }
   return found;
@@ -99,6 +128,60 @@ function wrapHtml(body: string): string {
 export class PdfConverterService {
   isDocxFile(mimeType: string, fileName: string): boolean {
     return mimeType === DOCX_MIME || /\.docx$/i.test(fileName);
+  }
+
+  isDocFile(mimeType: string, fileName: string): boolean {
+    return mimeType === DOC_MIME || /\.doc$/i.test(fileName);
+  }
+
+  isWordFile(mimeType: string, fileName: string): boolean {
+    return (
+      this.isDocxFile(mimeType, fileName) ||
+      this.isDocFile(mimeType, fileName)
+    );
+  }
+
+  async convertWordToPdf(
+    buffer: Buffer,
+    fileName: string,
+    mimeType: string,
+  ): Promise<Buffer> {
+    if (this.isDocFile(mimeType, fileName)) {
+      return this.convertOfficeDocumentToPdf(buffer, fileName);
+    }
+    return this.convertDocxToPdf(buffer);
+  }
+
+  private async convertOfficeDocumentToPdf(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<Buffer> {
+    const workDir = await mkdtemp(join(tmpdir(), "eduai-office-"));
+    const ext = extname(fileName).toLowerCase() || ".doc";
+    const inputName = `input${ext}`;
+    const inputPath = join(workDir, inputName);
+    const outputPath = join(workDir, "input.pdf");
+
+    try {
+      await writeFile(inputPath, buffer);
+      await execFileAsync(findLibreOffice(), [
+        "--headless",
+        "--nologo",
+        "--nofirststartwizard",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        workDir,
+        inputPath,
+      ]);
+
+      return await readFile(outputPath);
+    } catch (error) {
+      const name = basename(fileName);
+      throw new Error(`Convert ${name} sang PDF bang LibreOffice that bai: ${error}`);
+    } finally {
+      await rm(workDir, { recursive: true, force: true });
+    }
   }
 
   /**

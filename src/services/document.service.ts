@@ -99,13 +99,17 @@ export class DocumentService {
   }
 
   async upload(input: UploadDocumentInput): Promise<PublicDocument> {
-    if (this.pdfConverterService.isDocxFile(input.mimeType, input.originalName)) {
+    if (this.pdfConverterService.isWordFile(input.mimeType, input.originalName)) {
       try {
-        input.buffer = await this.pdfConverterService.convertDocxToPdf(input.buffer);
-        input.originalName = input.originalName.replace(/\.docx$/i, ".pdf");
+        input.buffer = await this.pdfConverterService.convertWordToPdf(
+          input.buffer,
+          input.originalName,
+          input.mimeType,
+        );
+        input.originalName = input.originalName.replace(/\.docx?$/i, ".pdf");
         input.mimeType = "application/pdf";
       } catch (err) {
-        console.error("[DocumentService] DOCX to PDF failed, storing original:", err);
+        console.error("[DocumentService] Word to PDF failed, storing original:", err);
       }
     }
 
