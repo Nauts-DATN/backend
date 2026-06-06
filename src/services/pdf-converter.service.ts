@@ -146,10 +146,10 @@ export class PdfConverterService {
     fileName: string,
     mimeType: string,
   ): Promise<Buffer> {
-    if (this.isDocFile(mimeType, fileName)) {
+    if (this.isWordFile(mimeType, fileName)) {
       return this.convertOfficeDocumentToPdf(buffer, fileName);
     }
-    return this.convertDocxToPdf(buffer);
+    throw new Error("File khong phai DOC hoac DOCX");
   }
 
   private async convertOfficeDocumentToPdf(

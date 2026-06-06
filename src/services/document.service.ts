@@ -109,7 +109,11 @@ export class DocumentService {
         input.originalName = input.originalName.replace(/\.docx?$/i, ".pdf");
         input.mimeType = "application/pdf";
       } catch (err) {
-        console.error("[DocumentService] Word to PDF failed, storing original:", err);
+        console.error("[DocumentService] Word to PDF failed:", err);
+        throw makeErr(
+          "Khong the chuyen doi file Word sang PDF. Vui long thu lai hoac upload PDF.",
+          500,
+        );
       }
     }
 
