@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type { AiService } from "../../services/ai.service.js";
 import type { GenerateQuizOptions } from "../../llm/quiz.js";
+import type { SubmitQuizAttemptInput } from "../../services/ai.service.js";
 import { sendOk, sendFail } from "../../utils/response.js";
 
 const ALLOWED_QUESTION_TYPES = new Set(["multiple_choice", "essay"]);
@@ -136,6 +137,27 @@ export class AiController {
         req.auth!.role,
       );
       sendOk(res, { quiz });
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) {
+        sendFail(res, err.status, err.message);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  /** POST /quizzes/:id/attempts */
+  submitQuizAttempt = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const body = req.body as SubmitQuizAttemptInput;
+      const attempt = await this.aiService.submitQuizAttempt(
+        req.params.id,
+        req.auth!.userId,
+        req.auth!.role,
+        body,
+      );
+      sendOk(res, { attempt }, 201);
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.status) {

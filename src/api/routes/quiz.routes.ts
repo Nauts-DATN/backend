@@ -13,6 +13,7 @@ export function quizRoutes(
 
   /** Lấy chi tiết một quiz. */
   r.get("/:id", auth.authenticate, aiController.getQuizById);
+  r.post("/:id/attempts", auth.authenticate, aiController.submitQuizAttempt);
 
   /** Xóa một quiz. */
   r.delete("/:id", auth.authenticate, aiController.deleteQuiz);
