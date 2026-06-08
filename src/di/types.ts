@@ -5,6 +5,7 @@ import type { CategoryRepository } from "../repositories/category.repository.js"
 import type { CourseRepository } from "../repositories/course.repository.js";
 import type { NoteRepository } from "../repositories/note.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
+import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
 import type { RoadmapRepository } from "../repositories/roadmap.repository.js";
 import type { TaskRepository } from "../repositories/task.repository.js";
 import type { UserService } from "../services/user.service.js";
@@ -36,6 +37,7 @@ export interface Cradle {
   documentRepository: DocumentRepository;
   noteRepository: NoteRepository;
   quizRepository: QuizRepository;
+  quizAttemptRepository: QuizAttemptRepository;
   roadmapRepository: RoadmapRepository;
   taskRepository: TaskRepository;
   categoryRepository: CategoryRepository;

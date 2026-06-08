@@ -5,6 +5,7 @@ import { UserRepository } from "../repositories/user.repository.js";
 import { DocumentRepository } from "../repositories/document.repository.js";
 import { NoteRepository } from "../repositories/note.repository.js";
 import { QuizRepository } from "../repositories/quiz.repository.js";
+import { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
 import { RoadmapRepository } from "../repositories/roadmap.repository.js";
 import { TaskRepository } from "../repositories/task.repository.js";
 import { CategoryRepository } from "../repositories/category.repository.js";
@@ -43,6 +44,7 @@ export function createAppContainer() {
     documentRepository: asClass(DocumentRepository).singleton(),
     noteRepository: asClass(NoteRepository).singleton(),
     quizRepository: asClass(QuizRepository).singleton(),
+    quizAttemptRepository: asClass(QuizAttemptRepository).singleton(),
     roadmapRepository: asClass(RoadmapRepository).singleton(),
     taskRepository: asClass(TaskRepository).singleton(),
     categoryRepository: asClass(CategoryRepository).singleton(),

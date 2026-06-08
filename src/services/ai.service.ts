@@ -9,7 +9,13 @@ import {
 } from "../llm/quiz.js";
 import type { DocumentRepository } from "../repositories/document.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
+import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
+import type {
+  QuizAttemptAnswer,
+  IQuizAttempt,
+} from "../models/quiz-attempt.model.js";
+import type { Types } from "mongoose";
 
 function makeErr(message: string, status: number): Error & { status: number } {
   const e = new Error(message) as Error & { status: number };
@@ -40,26 +46,65 @@ export type PublicQuiz = {
   createdBy: string;
   questionType: QuestionType;
   questions: QuizQuestion[];
+  latestAttempt?: PublicQuizAttempt | null;
   createdAt: string;
   updatedAt: string;
 };
 
 export type QuizResult = PublicQuiz & { documentTitle: string };
 
+export type PublicQuizAttempt = {
+  id: string;
+  quizId: string;
+  userId: string;
+  score: number | null;
+  correctCount: number | null;
+  totalQuestions: number;
+  answers: QuizAttemptAnswer[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SubmitQuizAttemptInput = {
+  score?: number | null;
+  correctCount?: number | null;
+  totalQuestions: number;
+  answers?: QuizAttemptAnswer[];
+};
+
+type QuizAttemptDoc = IQuizAttempt & { _id: Types.ObjectId };
+
 export class AiService {
   constructor(
     documentRepository: DocumentRepository,
     s3Storage: S3StorageService,
     quizRepository: QuizRepository,
+    quizAttemptRepository: QuizAttemptRepository,
   ) {
     this.documentRepository = documentRepository;
     this.s3Storage = s3Storage;
     this.quizRepository = quizRepository;
+    this.quizAttemptRepository = quizAttemptRepository;
   }
 
   private readonly documentRepository: DocumentRepository;
   private readonly s3Storage: S3StorageService;
   private readonly quizRepository: QuizRepository;
+  private readonly quizAttemptRepository: QuizAttemptRepository;
+
+  private toPublicAttempt(attempt: QuizAttemptDoc): PublicQuizAttempt {
+    return {
+      id: attempt._id.toString(),
+      quizId: attempt.quiz.toString(),
+      userId: attempt.user.toString(),
+      score: attempt.score ?? null,
+      correctCount: attempt.correctCount ?? null,
+      totalQuestions: attempt.totalQuestions,
+      answers: attempt.answers ?? [],
+      createdAt: attempt.createdAt.toISOString(),
+      updatedAt: attempt.updatedAt.toISOString(),
+    };
+  }
 
   async summarizeDocument(
     documentId: string,
@@ -194,6 +239,18 @@ export class AiService {
         ? await this.quizRepository.findAll()
         : await this.quizRepository.findAllByUser(requesterId);
 
+    const latestAttempts =
+      await this.quizAttemptRepository.findLatestByQuizIdsForUser(
+        quizzes.map((q) => q._id.toString()),
+        requesterId,
+      );
+    const latestAttemptByQuiz = new Map(
+      latestAttempts.map((attempt) => [
+        attempt.quiz.toString(),
+        this.toPublicAttempt(attempt),
+      ]),
+    );
+
     return quizzes.map((q) => {
       // Sau populate, q.document có thể là object { _id, title }
       const populated = q.document as unknown as
@@ -215,6 +272,7 @@ export class AiService {
         createdBy: q.createdBy.toString(),
         questionType: q.questionType,
         questions: q.questions,
+        latestAttempt: latestAttemptByQuiz.get(q._id.toString()) ?? null,
         createdAt: q.createdAt.toISOString(),
         updatedAt: q.updatedAt.toISOString(),
       };
@@ -236,12 +294,25 @@ export class AiService {
       throw makeErr("Không có quyền", 403);
     }
     const quizzes = await this.quizRepository.findAllByDocument(documentId);
+    const latestAttempts =
+      await this.quizAttemptRepository.findLatestByQuizIdsForUser(
+        quizzes.map((q) => q._id.toString()),
+        requesterId,
+      );
+    const latestAttemptByQuiz = new Map(
+      latestAttempts.map((attempt) => [
+        attempt.quiz.toString(),
+        this.toPublicAttempt(attempt),
+      ]),
+    );
+
     return quizzes.map((q) => ({
       id: q._id.toString(),
       documentId: q.document.toString(),
       createdBy: q.createdBy.toString(),
       questionType: q.questionType,
       questions: q.questions,
+      latestAttempt: latestAttemptByQuiz.get(q._id.toString()) ?? null,
       createdAt: q.createdAt.toISOString(),
       updatedAt: q.updatedAt.toISOString(),
     }));
@@ -261,15 +332,64 @@ export class AiService {
     ) {
       throw makeErr("Không có quyền", 403);
     }
+    const latestAttempts =
+      await this.quizAttemptRepository.findLatestByQuizIdsForUser(
+        [quizId],
+        requesterId,
+      );
+
     return {
       id: quiz._id.toString(),
       documentId: quiz.document.toString(),
       createdBy: quiz.createdBy.toString(),
       questionType: quiz.questionType,
       questions: quiz.questions,
+      latestAttempt: latestAttempts[0]
+        ? this.toPublicAttempt(latestAttempts[0])
+        : null,
       createdAt: quiz.createdAt.toISOString(),
       updatedAt: quiz.updatedAt.toISOString(),
     };
+  }
+
+  async submitQuizAttempt(
+    quizId: string,
+    requesterId: string,
+    requesterRole: string,
+    input: SubmitQuizAttemptInput,
+  ): Promise<PublicQuizAttempt> {
+    const quiz = await this.quizRepository.findById(quizId);
+    if (!quiz) throw makeErr("Khong tim thay quiz", 404);
+    if (
+      requesterRole !== "admin" &&
+      quiz.createdBy.toString() !== requesterId
+    ) {
+      throw makeErr("Khong co quyen", 403);
+    }
+
+    if (!Number.isFinite(input.totalQuestions) || input.totalQuestions < 1) {
+      throw makeErr("totalQuestions khong hop le", 400);
+    }
+
+    const score =
+      input.score === undefined || input.score === null
+        ? null
+        : Math.min(Math.max(Math.round(Number(input.score)), 0), 100);
+    const correctCount =
+      input.correctCount === undefined || input.correctCount === null
+        ? null
+        : Math.max(Math.round(Number(input.correctCount)), 0);
+
+    const attempt = await this.quizAttemptRepository.create({
+      quizId,
+      userId: requesterId,
+      score,
+      correctCount,
+      totalQuestions: Math.round(input.totalQuestions),
+      answers: Array.isArray(input.answers) ? input.answers : [],
+    });
+
+    return this.toPublicAttempt(attempt);
   }
 
   /** Xóa một quiz. */
@@ -286,6 +406,7 @@ export class AiService {
     ) {
       throw makeErr("Không có quyền", 403);
     }
+    await this.quizAttemptRepository.deleteByQuiz(quizId);
     await this.quizRepository.deleteById(quizId);
   }
 }
