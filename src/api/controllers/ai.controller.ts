@@ -54,9 +54,10 @@ export class AiController {
   /** POST /documents/:id/quiz */
   generateQuiz = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { questionType = "multiple_choice", count } = req.body as {
+      const { questionType = "multiple_choice", count, additionalPrompt } = req.body as {
         questionType?: string;
         count?: number;
+        additionalPrompt?: string;
       };
 
       if (!ALLOWED_QUESTION_TYPES.has(questionType)) {
@@ -71,6 +72,10 @@ export class AiController {
       const options: GenerateQuizOptions = {
         questionType: questionType as GenerateQuizOptions["questionType"],
         count: count !== undefined ? Number(count) : undefined,
+        additionalPrompt:
+          typeof additionalPrompt === "string"
+            ? additionalPrompt.trim()
+            : undefined,
       };
 
       const result = await this.aiService.generateQuiz(

@@ -24,6 +24,7 @@ export type GenerateQuizOptions = {
   questionType: QuestionType;
   /** Số câu hỏi cần tạo. Mặc định 5, tối đa 20. */
   count?: number;
+  additionalPrompt?: string;
 };
 
 /**
@@ -116,6 +117,7 @@ export async function generateQuizFromPdf(
 ): Promise<QuizQuestion[]> {
   const count = Math.min(Math.max(options.count ?? 5, 1), 20);
   const questionType = options.questionType;
+  const additionalPrompt = options.additionalPrompt?.trim();
 
   const ai = getGenAI(apiKey);
   const blob = new Blob([pdfBuffer], { type: "application/pdf" });
@@ -142,7 +144,7 @@ export async function generateQuizFromPdf(
         {
           parts: [
             { fileData: { fileUri, mimeType: "application/pdf" } },
-            { text: buildQuizPrompt(count, questionType) },
+            { text: buildQuizPrompt(count, questionType, additionalPrompt) },
           ],
         },
       ],

@@ -20,7 +20,17 @@ Chỉ trả lời theo đúng cấu trúc trên, không thêm nội dung khác.`
 export function buildQuizPrompt(
   count: number,
   questionType: "multiple_choice" | "essay",
+  additionalPrompt?: string,
 ): string {
+  const additionalInstruction = additionalPrompt?.trim()
+    ? `
+
+Yêu cầu bổ sung của người dùng:
+${additionalPrompt.trim()}
+
+Hãy ưu tiên yêu cầu bổ sung này khi chọn phạm vi nội dung để tạo câu hỏi. Nếu yêu cầu bổ sung mâu thuẫn với tài liệu, vẫn phải bám sát nội dung có trong tài liệu và không tự bịa thông tin.`
+    : "";
+
   if (questionType === "multiple_choice") {
     const example = JSON.stringify(
       {
@@ -35,7 +45,7 @@ export function buildQuizPrompt(
       2,
     );
 
-    return `Bạn là trợ lý giáo dục. Hãy đọc toàn bộ tài liệu đính kèm và tạo ${count} câu hỏi trắc nghiệm bằng tiếng Việt để kiểm tra hiểu biết người học.
+    return `Bạn là trợ lý giáo dục. Hãy đọc toàn bộ tài liệu đính kèm và tạo ${count} câu hỏi trắc nghiệm bằng tiếng Việt để kiểm tra hiểu biết người học.${additionalInstruction}
 
 Quy tắc bắt buộc:
 1. Câu hỏi phải bám sát nội dung tài liệu, không đặt câu ngoài phạm vi.
@@ -66,7 +76,7 @@ Ví dụ đúng định dạng:
     2,
   );
 
-  return `Bạn là trợ lý giáo dục. Hãy đọc toàn bộ tài liệu đính kèm và tạo ${count} câu hỏi tự luận bằng tiếng Việt để kiểm tra hiểu biết người học.
+  return `Bạn là trợ lý giáo dục. Hãy đọc toàn bộ tài liệu đính kèm và tạo ${count} câu hỏi tự luận bằng tiếng Việt để kiểm tra hiểu biết người học.${additionalInstruction}
 
 Quy tắc bắt buộc:
 1. Câu hỏi phải bám sát nội dung tài liệu, không đặt câu ngoài phạm vi.
