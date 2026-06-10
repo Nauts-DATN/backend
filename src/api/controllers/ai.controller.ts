@@ -35,10 +35,14 @@ export class AiController {
   /** POST /documents/:id/summarize */
   summarizeDocument = async (req: Request, res: Response): Promise<void> => {
     try {
+      const { additionalPrompt } = req.body as { additionalPrompt?: string };
       const result = await this.aiService.summarizeDocument(
         req.params.id,
         req.auth!.userId,
         req.auth!.role,
+        typeof additionalPrompt === "string"
+          ? additionalPrompt.trim()
+          : undefined,
       );
       sendOk(res, result);
     } catch (e) {

@@ -1,5 +1,5 @@
 import { getGenAI } from "./genai.js";
-import { SUMMARIZE_DOCUMENT_PROMPT } from "./prompts.js";
+import { buildSummarizePrompt } from "./prompts.js";
 
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
 
@@ -19,6 +19,7 @@ export async function summarizePdf(
   pdfBuffer: Buffer,
   fileName: string,
   apiKey: string,
+  additionalPrompt?: string,
 ): Promise<string> {
   const ai = getGenAI(apiKey);
   const blob = new Blob([pdfBuffer], { type: "application/pdf" });
@@ -45,7 +46,7 @@ export async function summarizePdf(
         {
           parts: [
             { fileData: { fileUri, mimeType: "application/pdf" } },
-            { text: SUMMARIZE_DOCUMENT_PROMPT },
+            { text: buildSummarizePrompt(additionalPrompt) },
           ],
         },
       ],

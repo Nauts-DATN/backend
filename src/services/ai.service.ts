@@ -110,6 +110,7 @@ export class AiService {
     documentId: string,
     requesterId: string,
     requesterRole: string,
+    additionalPrompt?: string,
   ): Promise<SummaryResult> {
     if (!env.geminiApiKey) {
       throw makeErr("GEMINI_API_KEY chưa được cấu hình trên server.", 503);
@@ -134,7 +135,12 @@ export class AiService {
     const { body } = await this.s3Storage.getObject(doc.fileKey);
     const buffer = await streamToBuffer(body);
 
-    const summary = await summarizePdf(buffer, doc.fileName, env.geminiApiKey);
+    const summary = await summarizePdf(
+      buffer,
+      doc.fileName,
+      env.geminiApiKey,
+      additionalPrompt,
+    );
 
     // Lưu vào DB (fire-and-forget lỗi không chặn response)
     await this.documentRepository.setSummary(doc._id.toString(), summary).catch(
