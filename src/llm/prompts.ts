@@ -1,5 +1,5 @@
 /** Prompt tóm tắt tài liệu học tập bằng tiếng Việt. */
-export const SUMMARIZE_DOCUMENT_PROMPT = `Bạn là trợ lý giáo dục. Hãy đọc tài liệu đính kèm, yêu cầu bổ sung của người dùng và tóm tắt bằng tiếng Việt theo cấu trúc sau:
+export const SUMMARIZE_DOCUMENT_PROMPT = `Bạn là trợ lý giáo dục. Hãy đọc tài liệu đính kèm và tóm tắt bằng tiếng Việt theo cấu trúc sau:
 
 Tổng quan
 Viết 2–3 câu mô tả chủ đề chính và mục đích.
@@ -16,10 +16,15 @@ export function buildSummarizePrompt(additionalPrompt?: string): string {
   const additionalInstruction = additionalPrompt?.trim()
     ? `
 
-Yêu cầu bổ sung của người dùng:
+PHẠM VI TÓM TẮT DO NGƯỜI DÙNG YÊU CẦU:
 ${additionalPrompt.trim()}
 
-Nếu có yêu cầu bổ sung, hãy ưu tiên yêu cầu này khi chọn phạm vi nội dung để tóm tắt. Nếu yêu cầu bổ sung mâu thuẫn với tài liệu, vẫn phải bám sát nội dung có trong tài liệu và không tự bịa thông tin.`
+Quy tắc bắt buộc khi có phạm vi tóm tắt:
+1. Chỉ tóm tắt nội dung thuộc phạm vi người dùng yêu cầu ở trên.
+2. Không tóm tắt toàn bộ tài liệu nếu người dùng đã chỉ định một phạm vi hẹp, ví dụ: "chương đầu tiên", "chương 2", "phần React Hooks".
+3. Nếu yêu cầu là "chương đầu tiên", hãy xác định chương/chủ đề đầu tiên trong tài liệu và chỉ tóm tắt phần đó.
+4. Nếu không xác định được phạm vi yêu cầu trong tài liệu, hãy nói rõ "Không xác định được phạm vi yêu cầu trong tài liệu" trong phần Tổng quan, sau đó tóm tắt những nội dung gần nhất với yêu cầu. Không chuyển sang tóm tắt toàn bộ tài liệu.
+5. Vẫn phải bám sát nội dung có trong tài liệu, không tự bịa thông tin.`
     : "";
 
   return `${SUMMARIZE_DOCUMENT_PROMPT}${additionalInstruction}`;
