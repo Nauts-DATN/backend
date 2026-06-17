@@ -10,6 +10,7 @@ import { RoadmapRepository } from "../repositories/roadmap.repository.js";
 import { TaskRepository } from "../repositories/task.repository.js";
 import { CategoryRepository } from "../repositories/category.repository.js";
 import { CourseRepository } from "../repositories/course.repository.js";
+import { SystemReportRepository } from "../repositories/system-report.repository.js";
 import { JwtService } from "../services/jwt.service.js";
 import { EmailService } from "../services/email.service.js";
 import { AuthService } from "../services/auth.service.js";
@@ -22,6 +23,7 @@ import { CategoryService } from "../services/category.service.js";
 import { CourseService } from "../services/course.service.js";
 import { RoadmapService } from "../services/roadmap.service.js";
 import { HealthService } from "../services/health.service.js";
+import { SystemReportService } from "../services/system-report.service.js";
 import { AuthMiddleware } from "../middleware/auth.middleware.js";
 import { UserController } from "../api/controllers/user.controller.js";
 import { HealthController } from "../api/controllers/health.controller.js";
@@ -32,6 +34,7 @@ import { AiController } from "../api/controllers/ai.controller.js";
 import { CategoryController } from "../api/controllers/category.controller.js";
 import { CourseController } from "../api/controllers/course.controller.js";
 import { RoadmapController } from "../api/controllers/roadmap.controller.js";
+import { SystemReportController } from "../api/controllers/system-report.controller.js";
 
 export function createAppContainer() {
   const container = createContainer<Cradle>({
@@ -49,6 +52,7 @@ export function createAppContainer() {
     taskRepository: asClass(TaskRepository).singleton(),
     categoryRepository: asClass(CategoryRepository).singleton(),
     courseRepository: asClass(CourseRepository).singleton(),
+    systemReportRepository: asClass(SystemReportRepository).singleton(),
     jwtService: asClass(JwtService).singleton(),
     emailService: asClass(EmailService).singleton(),
     authService: asClass(AuthService).singleton(),
@@ -62,6 +66,7 @@ export function createAppContainer() {
     courseService: asClass(CourseService).singleton(),
     roadmapService: asClass(RoadmapService).singleton(),
     healthService: asClass(HealthService).singleton(),
+    systemReportService: asClass(SystemReportService).singleton(),
     userController: asClass(UserController).singleton(),
     healthController: asClass(HealthController).singleton(),
     authController: asClass(AuthController).singleton(),
@@ -71,6 +76,7 @@ export function createAppContainer() {
     categoryController: asClass(CategoryController).singleton(),
     courseController: asClass(CourseController).singleton(),
     roadmapController: asClass(RoadmapController).singleton(),
+    systemReportController: asClass(SystemReportController).singleton(),
   });
 
   return container;

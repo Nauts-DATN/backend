@@ -10,6 +10,7 @@ import { courseRoutes } from "./course.routes.js";
 import { noteRoutes } from "./note.routes.js";
 import { quizRoutes } from "./quiz.routes.js";
 import { roadmapRoutes } from "./roadmap.routes.js";
+import { systemReportRoutes } from "./system-report.routes.js";
 
 export function registerRoutes(container: AwilixContainer<Cradle>): Router {
   const api = Router();
@@ -24,6 +25,7 @@ export function registerRoutes(container: AwilixContainer<Cradle>): Router {
     categoryController,
     courseController,
     roadmapController,
+    systemReportController,
   } = container.cradle;
 
   api.use("/health", healthRoutes(healthController));
@@ -35,6 +37,7 @@ export function registerRoutes(container: AwilixContainer<Cradle>): Router {
   api.use("/notes", noteRoutes(noteController, authMiddleware));
   api.use("/quizzes", quizRoutes(aiController, authMiddleware));
   api.use("/roadmaps", roadmapRoutes(roadmapController, authMiddleware));
+  api.use("/system-reports", systemReportRoutes(systemReportController, authMiddleware));
 
   return api;
 }
