@@ -3,6 +3,7 @@ import type { UserRepository } from "../repositories/user.repository.js";
 import type { DocumentRepository } from "../repositories/document.repository.js";
 import type { CategoryRepository } from "../repositories/category.repository.js";
 import type { CourseRepository } from "../repositories/course.repository.js";
+import type { SystemReportRepository } from "../repositories/system-report.repository.js";
 import type { NoteRepository } from "../repositories/note.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
@@ -20,6 +21,7 @@ import type { PdfConverterService } from "../services/pdf-converter.service.js";
 import type { CategoryService } from "../services/category.service.js";
 import type { CourseService } from "../services/course.service.js";
 import type { RoadmapService } from "../services/roadmap.service.js";
+import type { SystemReportService } from "../services/system-report.service.js";
 import type { UserController } from "../api/controllers/user.controller.js";
 import type { HealthController } from "../api/controllers/health.controller.js";
 import type { AuthController } from "../api/controllers/auth.controller.js";
@@ -29,6 +31,7 @@ import type { AiController } from "../api/controllers/ai.controller.js";
 import type { CategoryController } from "../api/controllers/category.controller.js";
 import type { CourseController } from "../api/controllers/course.controller.js";
 import type { RoadmapController } from "../api/controllers/roadmap.controller.js";
+import type { SystemReportController } from "../api/controllers/system-report.controller.js";
 import type { AuthMiddleware } from "../middleware/auth.middleware.js";
 
 export interface Cradle {
@@ -42,6 +45,7 @@ export interface Cradle {
   taskRepository: TaskRepository;
   categoryRepository: CategoryRepository;
   courseRepository: CourseRepository;
+  systemReportRepository: SystemReportRepository;
   jwtService: JwtService;
   emailService: EmailService;
   authService: AuthService;
@@ -54,6 +58,7 @@ export interface Cradle {
   categoryService: CategoryService;
   courseService: CourseService;
   roadmapService: RoadmapService;
+  systemReportService: SystemReportService;
   healthService: HealthService;
   userController: UserController;
   healthController: HealthController;
@@ -64,4 +69,5 @@ export interface Cradle {
   categoryController: CategoryController;
   courseController: CourseController;
   roadmapController: RoadmapController;
+  systemReportController: SystemReportController;
 }

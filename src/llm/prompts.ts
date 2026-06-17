@@ -5,7 +5,7 @@ Tổng quan
 Viết 2–3 câu mô tả chủ đề chính và mục đích.
 
 Nội dung chính
-Liệt kê 5–8 ý chính dưới dạng bullet points, mỗi ý 1–2 câu.
+Liệt kê 5–8 ý chính, mỗi ý 1–2 câu.
 
 Từ khóa
 Liệt kê 5–10 từ khóa hoặc cụm từ quan trọng, cách nhau bằng dấu phẩy.
