@@ -68,4 +68,6 @@ export const env = {
   },
   /** Google Gemini API key — lấy từ https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  geminiEmbeddingModel:
+    process.env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-embedding-001",
 };

@@ -1,7 +1,7 @@
 import { getGenAI } from "./genai.js";
 import { buildSummarizePrompt } from "./prompts.js";
 
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 /**
  * Tóm tắt nội dung một file PDF qua Gemini Files API.
@@ -70,4 +70,38 @@ export async function summarizePdf(
         );
     }
   }
+}
+
+export async function summarizeFromContext(
+  contextText: string,
+  apiKey: string,
+  additionalPrompt: string,
+): Promise<string> {
+  const ai = getGenAI(apiKey);
+
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      {
+        parts: [
+          { text: `CONTEXT TRICH XUAT TU TAI LIEU:\n${contextText}` },
+          { text: buildSummarizePrompt(additionalPrompt) },
+          {
+            text:
+              "Chi tom tat dua tren CONTEXT o tren. Khong tom tat ngoai pham vi context. Neu context khong du thong tin, hay noi ro trong phan Tong quan va khong bia them.",
+          },
+        ],
+      },
+    ],
+  });
+
+  const text = response.text?.trim() ?? "";
+  if (!text) {
+    throw Object.assign(
+      new Error("Gemini khong tra ve noi dung tom tat tu context."),
+      { status: 502 },
+    );
+  }
+
+  return text;
 }

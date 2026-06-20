@@ -1,7 +1,8 @@
 import { Readable } from "node:stream";
 import { env } from "../config/env.js";
-import { summarizePdf } from "../llm/summarize.js";
+import { summarizeFromContext, summarizePdf } from "../llm/summarize.js";
 import {
+  generateQuizFromContext,
   generateQuizFromPdf,
   type GenerateQuizOptions,
   type QuestionType,
@@ -11,6 +12,7 @@ import type { DocumentRepository } from "../repositories/document.repository.js"
 import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
+import type { RagService } from "./rag.service.js";
 import type {
   QuizAttemptAnswer,
   IQuizAttempt,
@@ -80,17 +82,20 @@ export class AiService {
     s3Storage: S3StorageService,
     quizRepository: QuizRepository,
     quizAttemptRepository: QuizAttemptRepository,
+    ragService: RagService,
   ) {
     this.documentRepository = documentRepository;
     this.s3Storage = s3Storage;
     this.quizRepository = quizRepository;
     this.quizAttemptRepository = quizAttemptRepository;
+    this.ragService = ragService;
   }
 
   private readonly documentRepository: DocumentRepository;
   private readonly s3Storage: S3StorageService;
   private readonly quizRepository: QuizRepository;
   private readonly quizAttemptRepository: QuizAttemptRepository;
+  private readonly ragService: RagService;
 
   private toPublicAttempt(attempt: QuizAttemptDoc): PublicQuizAttempt {
     return {
@@ -132,15 +137,59 @@ export class AiService {
       );
     }
 
-    const { body } = await this.s3Storage.getObject(doc.fileKey);
-    const buffer = await streamToBuffer(body);
+    let summary: string;
+    const requestedScope = additionalPrompt?.trim();
 
-    const summary = await summarizePdf(
-      buffer,
-      doc.fileName,
-      env.geminiApiKey,
-      additionalPrompt,
-    );
+    if (
+      requestedScope &&
+      doc.ragStatus &&
+      doc.ragStatus !== "completed" &&
+      doc.ragStatus !== "skipped"
+    ) {
+      if (doc.ragStatus === "failed") {
+        throw makeErr(
+          `Khong the dung RAG cho tai lieu nay: ${doc.ragError ?? "indexing failed"}`,
+          422,
+        );
+      }
+      throw makeErr(
+        "Tai lieu dang duoc xu ly noi dung. Vui long thu lai sau.",
+        409,
+      );
+    }
+
+    const ragContext =
+      requestedScope && doc.ragStatus === "completed"
+        ? await this.ragService.retrieve({
+            documentId: doc._id.toString(),
+            query: requestedScope,
+          })
+        : null;
+
+    if (ragContext) {
+      if (!ragContext.isEnough) {
+        throw makeErr(
+          "Noi dung tim thay khong du de tom tat chat luong cho yeu cau nay.",
+          422,
+        );
+      }
+
+      summary = await summarizeFromContext(
+        ragContext.contextText,
+        env.geminiApiKey,
+        requestedScope ?? "",
+      );
+    } else {
+      const { body } = await this.s3Storage.getObject(doc.fileKey);
+      const buffer = await streamToBuffer(body);
+
+      summary = await summarizePdf(
+        buffer,
+        doc.fileName,
+        env.geminiApiKey,
+        additionalPrompt,
+      );
+    }
 
     // Lưu vào DB (fire-and-forget lỗi không chặn response)
     await this.documentRepository.setSummary(doc._id.toString(), summary).catch(
@@ -207,15 +256,71 @@ export class AiService {
       );
     }
 
-    const { body } = await this.s3Storage.getObject(doc.fileKey);
-    const buffer = await streamToBuffer(body);
+    let questions: QuizQuestion[];
+    const additionalPrompt = options.additionalPrompt?.trim();
 
-    const questions = await generateQuizFromPdf(
-      buffer,
-      doc.fileName,
-      options,
-      env.geminiApiKey,
-    );
+    if (
+      additionalPrompt &&
+      doc.ragStatus &&
+      doc.ragStatus !== "completed" &&
+      doc.ragStatus !== "skipped"
+    ) {
+      if (doc.ragStatus === "failed") {
+        throw makeErr(
+          `Khong the dung RAG cho tai lieu nay: ${doc.ragError ?? "indexing failed"}`,
+          422,
+        );
+      }
+      throw makeErr(
+        "Tai lieu dang duoc xu ly noi dung. Vui long thu lai sau.",
+        409,
+      );
+    }
+
+    const ragContext = additionalPrompt
+      ? await this.ragService.retrieve({
+          documentId: doc._id.toString(),
+          query: additionalPrompt,
+        })
+      : null;
+
+    if (ragContext) {
+      if (!ragContext.isEnough || ragContext.suggestedQuestionCount < 1) {
+        throw makeErr(
+          "Noi dung tim thay khong du de tao cau hoi chat luong cho yeu cau nay.",
+          422,
+        );
+      }
+
+      const requestedCount = Math.min(Math.max(options.count ?? 5, 1), 20);
+      const finalCount = Math.min(
+        requestedCount,
+        ragContext.suggestedQuestionCount,
+      );
+
+      questions = await generateQuizFromContext(
+        ragContext.contextText,
+        {
+          ...options,
+          count: finalCount,
+        },
+        env.geminiApiKey,
+      );
+    } else {
+      const { body } = await this.s3Storage.getObject(doc.fileKey);
+      const buffer = await streamToBuffer(body);
+
+      questions = await generateQuizFromPdf(
+        buffer,
+        doc.fileName,
+        options,
+        env.geminiApiKey,
+      );
+    }
+
+    if (questions.length === 0) {
+      throw makeErr("Khong tao duoc cau hoi phu hop voi yeu cau.", 422);
+    }
 
     const saved = await this.quizRepository.create({
       documentId: doc._id.toString(),

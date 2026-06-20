@@ -6,6 +6,7 @@ import { DocumentRepository } from "../repositories/document.repository.js";
 import { NoteRepository } from "../repositories/note.repository.js";
 import { QuizRepository } from "../repositories/quiz.repository.js";
 import { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
+import { DocumentChunkRepository } from "../repositories/document-chunk.repository.js";
 import { RoadmapRepository } from "../repositories/roadmap.repository.js";
 import { TaskRepository } from "../repositories/task.repository.js";
 import { CategoryRepository } from "../repositories/category.repository.js";
@@ -24,6 +25,7 @@ import { CourseService } from "../services/course.service.js";
 import { RoadmapService } from "../services/roadmap.service.js";
 import { HealthService } from "../services/health.service.js";
 import { SystemReportService } from "../services/system-report.service.js";
+import { RagService } from "../services/rag.service.js";
 import { AuthMiddleware } from "../middleware/auth.middleware.js";
 import { UserController } from "../api/controllers/user.controller.js";
 import { HealthController } from "../api/controllers/health.controller.js";
@@ -48,6 +50,7 @@ export function createAppContainer() {
     noteRepository: asClass(NoteRepository).singleton(),
     quizRepository: asClass(QuizRepository).singleton(),
     quizAttemptRepository: asClass(QuizAttemptRepository).singleton(),
+    documentChunkRepository: asClass(DocumentChunkRepository).singleton(),
     roadmapRepository: asClass(RoadmapRepository).singleton(),
     taskRepository: asClass(TaskRepository).singleton(),
     categoryRepository: asClass(CategoryRepository).singleton(),
@@ -67,6 +70,7 @@ export function createAppContainer() {
     roadmapService: asClass(RoadmapService).singleton(),
     healthService: asClass(HealthService).singleton(),
     systemReportService: asClass(SystemReportService).singleton(),
+    ragService: asClass(RagService).singleton(),
     userController: asClass(UserController).singleton(),
     healthController: asClass(HealthController).singleton(),
     authController: asClass(AuthController).singleton(),

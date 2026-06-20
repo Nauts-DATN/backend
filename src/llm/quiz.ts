@@ -10,6 +10,7 @@ export type QuizQuestion = {
   id: string;
   type: QuestionType;
   text: string;
+  sourceChunkIds?: string[];
   /** Chỉ có với trắc nghiệm — 4 lựa chọn. */
   options?: string[];
   /** Chỉ có với trắc nghiệm — index đáp án đúng (0–3). */
@@ -65,6 +66,11 @@ function buildResponseSchema(questionType: QuestionType) {
             type: Type.STRING,
             description: "Giải thích ngắn tại sao đáp án đúng",
           },
+          sourceChunkIds: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "Danh sach chunk nguon neu cau hoi duoc tao tu RAG context",
+          },
         },
         required: ["id", "type", "text", "options", "answer"],
       },
@@ -93,6 +99,11 @@ function buildResponseSchema(questionType: QuestionType) {
           type: Type.STRING,
           description:
             "Câu trả lời mẫu đầy đủ 2–4 câu bằng tiếng Việt, dựa trên nội dung tài liệu",
+        },
+        sourceChunkIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Danh sach chunk nguon neu cau hoi duoc tao tu RAG context",
         },
       },
       required: ["id", "type", "text", "sampleAnswer"],
@@ -190,4 +201,59 @@ export async function generateQuizFromPdf(
         );
     }
   }
+}
+
+export async function generateQuizFromContext(
+  contextText: string,
+  options: GenerateQuizOptions,
+  apiKey: string,
+): Promise<QuizQuestion[]> {
+  const count = Math.min(Math.max(options.count ?? 5, 1), 20);
+  const questionType = options.questionType;
+  const additionalPrompt = options.additionalPrompt?.trim();
+  const ai = getGenAI(apiKey);
+
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      {
+        parts: [
+          { text: `CONTEXT TRICH XUAT TU TAI LIEU:\n${contextText}` },
+          { text: buildQuizPrompt(count, questionType, additionalPrompt) },
+          {
+            text:
+              "Chi tao cau hoi dua tren CONTEXT o tren. Moi cau hoi nen co sourceChunkIds voi gia tri dang chunk_<so>. Neu context khong du thong tin, chi tao so cau hoi that su co the tao va khong bia them.",
+          },
+        ],
+      },
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: buildResponseSchema(questionType),
+    },
+  });
+
+  const raw = response.text?.trim() ?? "";
+  if (!raw) {
+    throw Object.assign(new Error("Gemini khong tra ve du lieu quiz."), {
+      status: 502,
+    });
+  }
+
+  const parsed = JSON.parse(raw) as QuizQuestion[];
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw Object.assign(new Error("Gemini tra ve quiz khong hop le."), {
+      status: 502,
+    });
+  }
+
+  const seen = new Set<string>();
+  return parsed
+    .filter((q) => q.type === questionType)
+    .filter((q) => {
+      const key = q.text.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }

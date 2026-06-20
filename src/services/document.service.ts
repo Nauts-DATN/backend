@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { Types } from "mongoose";
 import type { IDocument } from "../models/document.model.js";
+import type { RagStatus } from "../models/document.model.js";
 import type { DocumentRepository } from "../repositories/document.repository.js";
 import type { NoteRepository } from "../repositories/note.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
 import type { S3StorageService } from "../storage/s3-storage.service.js";
 import type { PdfConverterService } from "./pdf-converter.service.js";
+import type { RagService } from "./rag.service.js";
 
 const DEFAULT_PRESIGNED_EXPIRES = 1500;
 
@@ -26,6 +28,10 @@ export type PublicDocument = {
   presignedExpiresIn: number;
   summary: string | null;
   summarizedAt: string | null;
+  ragStatus: RagStatus;
+  ragIndexedAt: string | null;
+  ragError: string | null;
+  ragChunkCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -61,6 +67,7 @@ export class DocumentService {
     noteRepository: NoteRepository,
     quizRepository: QuizRepository,
     quizAttemptRepository: QuizAttemptRepository,
+    ragService: RagService,
   ) {
     this.documentRepository = documentRepository;
     this.s3Storage = s3Storage;
@@ -68,6 +75,7 @@ export class DocumentService {
     this.noteRepository = noteRepository;
     this.quizRepository = quizRepository;
     this.quizAttemptRepository = quizAttemptRepository;
+    this.ragService = ragService;
   }
 
   private readonly documentRepository: DocumentRepository;
@@ -76,6 +84,7 @@ export class DocumentService {
   private readonly noteRepository: NoteRepository;
   private readonly quizRepository: QuizRepository;
   private readonly quizAttemptRepository: QuizAttemptRepository;
+  private readonly ragService: RagService;
 
   private async toPublic(
     doc: IDocument & { _id: Types.ObjectId },
@@ -97,6 +106,10 @@ export class DocumentService {
       presignedExpiresIn: expiresIn,
       summary: doc.summary ?? null,
       summarizedAt: doc.summarizedAt?.toISOString() ?? null,
+      ragStatus: doc.ragStatus ?? "pending",
+      ragIndexedAt: doc.ragIndexedAt?.toISOString() ?? null,
+      ragError: doc.ragError ?? null,
+      ragChunkCount: doc.ragChunkCount ?? 0,
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
     };
@@ -136,7 +149,50 @@ export class DocumentService {
       fileName: input.originalName,
       fileSize: input.buffer.byteLength,
       mimeType: input.mimeType,
+      ragStatus: "pending",
     });
+
+    if (input.mimeType === "application/pdf") {
+      void (async () => {
+        await this.documentRepository.setRagStatus(
+          doc._id.toString(),
+          "processing",
+          { chunkCount: 0, indexedAt: null },
+        );
+        const result = await this.ragService.indexPdfDocument({
+          documentId: doc._id.toString(),
+          userId: input.uploadedBy,
+          buffer: input.buffer,
+        });
+        if (result.skippedReason) {
+          await this.documentRepository.setRagStatus(
+            doc._id.toString(),
+            "skipped",
+            {
+              chunkCount: 0,
+              indexedAt: new Date(),
+              error:
+                result.skippedReason === "scanned_pdf"
+                  ? "PDF dang scan, he thong se gui truc tiep file cho Gemini."
+                  : "Khong trich xuat duoc noi dung text tu PDF.",
+            },
+          );
+          return;
+        }
+        await this.documentRepository.setRagStatus(
+          doc._id.toString(),
+          "completed",
+          { chunkCount: result.chunkCount, indexedAt: new Date() },
+        );
+      })().catch(async (err: unknown) => {
+        console.error("[DocumentService] RAG indexing failed:", err);
+        await this.documentRepository
+          .setRagStatus(doc._id.toString(), "failed", {
+            error: err instanceof Error ? err.message : "RAG indexing failed",
+          })
+          .catch(() => undefined);
+      });
+    }
 
     return this.toPublic(doc);
   }
@@ -221,6 +277,7 @@ export class DocumentService {
         quizzes.map((quiz) => quiz._id.toString()),
       ),
       this.quizRepository.deleteByDocument(id),
+      this.ragService.deleteByDocument(id),
     ]);
     await this.documentRepository.deleteById(id);
   }
