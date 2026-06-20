@@ -69,6 +69,7 @@ S3_BUCKET=eduai
 S3_FORCE_PATH_STYLE=true
 
 GEMINI_API_KEY=
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 
 EMAIL_FROM="EduAI <noreply@localhost>"
 SMTP_HOST=

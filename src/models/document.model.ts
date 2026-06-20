@@ -1,5 +1,14 @@
 import mongoose, { Schema, type Types } from "mongoose";
 
+export const RAG_STATUSES = [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "skipped",
+] as const;
+export type RagStatus = (typeof RAG_STATUSES)[number];
+
 export interface IDocument {
   title: string;
   description?: string;
@@ -14,6 +23,10 @@ export interface IDocument {
   summary?: string;
   /** Thời điểm tóm tắt lần cuối. */
   summarizedAt?: Date;
+  ragStatus?: RagStatus;
+  ragIndexedAt?: Date;
+  ragError?: string;
+  ragChunkCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +59,15 @@ const documentSchema = new Schema<IDocument>(
     mimeType: { type: String, required: true },
     summary: { type: String, default: null },
     summarizedAt: { type: Date, default: null },
+    ragStatus: {
+      type: String,
+      enum: RAG_STATUSES,
+      default: "pending",
+      index: true,
+    },
+    ragIndexedAt: { type: Date, default: null },
+    ragError: { type: String, default: null },
+    ragChunkCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 );

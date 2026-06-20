@@ -7,6 +7,7 @@ import type { SystemReportRepository } from "../repositories/system-report.repos
 import type { NoteRepository } from "../repositories/note.repository.js";
 import type { QuizRepository } from "../repositories/quiz.repository.js";
 import type { QuizAttemptRepository } from "../repositories/quiz-attempt.repository.js";
+import type { DocumentChunkRepository } from "../repositories/document-chunk.repository.js";
 import type { RoadmapRepository } from "../repositories/roadmap.repository.js";
 import type { TaskRepository } from "../repositories/task.repository.js";
 import type { UserService } from "../services/user.service.js";
@@ -22,6 +23,7 @@ import type { CategoryService } from "../services/category.service.js";
 import type { CourseService } from "../services/course.service.js";
 import type { RoadmapService } from "../services/roadmap.service.js";
 import type { SystemReportService } from "../services/system-report.service.js";
+import type { RagService } from "../services/rag.service.js";
 import type { UserController } from "../api/controllers/user.controller.js";
 import type { HealthController } from "../api/controllers/health.controller.js";
 import type { AuthController } from "../api/controllers/auth.controller.js";
@@ -41,6 +43,7 @@ export interface Cradle {
   noteRepository: NoteRepository;
   quizRepository: QuizRepository;
   quizAttemptRepository: QuizAttemptRepository;
+  documentChunkRepository: DocumentChunkRepository;
   roadmapRepository: RoadmapRepository;
   taskRepository: TaskRepository;
   categoryRepository: CategoryRepository;
@@ -59,6 +62,7 @@ export interface Cradle {
   courseService: CourseService;
   roadmapService: RoadmapService;
   systemReportService: SystemReportService;
+  ragService: RagService;
   healthService: HealthService;
   userController: UserController;
   healthController: HealthController;

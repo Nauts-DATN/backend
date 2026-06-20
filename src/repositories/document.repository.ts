@@ -1,5 +1,9 @@
 import type { Types } from "mongoose";
-import { DocumentModel, type IDocument } from "../models/document.model.js";
+import {
+  DocumentModel,
+  type IDocument,
+  type RagStatus,
+} from "../models/document.model.js";
 
 export type CreateDocumentInput = {
   title: string;
@@ -11,6 +15,7 @@ export type CreateDocumentInput = {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  ragStatus?: RagStatus;
 };
 
 export type FindDocumentsOptions = {
@@ -79,6 +84,35 @@ export class DocumentRepository {
       { summary, summarizedAt: new Date() },
       { new: true },
     )
+      .lean()
+      .exec();
+    return doc as DocumentDoc | null;
+  }
+
+  async setRagStatus(
+    id: string,
+    status: RagStatus,
+    data: {
+      chunkCount?: number;
+      error?: string | null;
+      indexedAt?: Date | null;
+    } = {},
+  ): Promise<DocumentDoc | null> {
+    const update: Record<string, unknown> = {
+      ragStatus: status,
+      ragError: data.error ?? null,
+    };
+
+    if (data.chunkCount !== undefined) {
+      update.ragChunkCount = data.chunkCount;
+    }
+    if (data.indexedAt !== undefined) {
+      update.ragIndexedAt = data.indexedAt;
+    }
+
+    const doc = await DocumentModel.findByIdAndUpdate(id, update, {
+      new: true,
+    })
       .lean()
       .exec();
     return doc as DocumentDoc | null;
