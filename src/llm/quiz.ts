@@ -26,6 +26,7 @@ export type GenerateQuizOptions = {
   /** Số câu hỏi cần tạo. Mặc định 5, tối đa 20. */
   count?: number;
   additionalPrompt?: string;
+  existingQuestions?: string[];
 };
 
 /**
@@ -129,6 +130,7 @@ export async function generateQuizFromPdf(
   const count = Math.min(Math.max(options.count ?? 5, 1), 20);
   const questionType = options.questionType;
   const additionalPrompt = options.additionalPrompt?.trim();
+  const existingQuestions = options.existingQuestions ?? [];
 
   const ai = getGenAI(apiKey);
   const blob = new Blob([pdfBuffer], { type: "application/pdf" });
@@ -155,7 +157,14 @@ export async function generateQuizFromPdf(
         {
           parts: [
             { fileData: { fileUri, mimeType: "application/pdf" } },
-            { text: buildQuizPrompt(count, questionType, additionalPrompt) },
+            {
+              text: buildQuizPrompt(
+                count,
+                questionType,
+                additionalPrompt,
+                existingQuestions,
+              ),
+            },
           ],
         },
       ],
@@ -211,6 +220,7 @@ export async function generateQuizFromContext(
   const count = Math.min(Math.max(options.count ?? 5, 1), 20);
   const questionType = options.questionType;
   const additionalPrompt = options.additionalPrompt?.trim();
+  const existingQuestions = options.existingQuestions ?? [];
   const ai = getGenAI(apiKey);
 
   const response = await ai.models.generateContent({
@@ -219,7 +229,14 @@ export async function generateQuizFromContext(
       {
         parts: [
           { text: `CONTEXT TRICH XUAT TU TAI LIEU:\n${contextText}` },
-          { text: buildQuizPrompt(count, questionType, additionalPrompt) },
+          {
+            text: buildQuizPrompt(
+              count,
+              questionType,
+              additionalPrompt,
+              existingQuestions,
+            ),
+          },
           {
             text:
               "Chi tao cau hoi dua tren CONTEXT o tren. Moi cau hoi nen co sourceChunkIds voi gia tri dang chunk_<so>. Neu context khong du thong tin, chi tao so cau hoi that su co the tao va khong bia them.",

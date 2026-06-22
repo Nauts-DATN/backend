@@ -6,7 +6,6 @@ import {
 
 export type CreateDocumentChunkInput = {
   documentId: string;
-  userId: string;
   chunkIndex: number;
   text: string;
   embedding: number[];
@@ -25,7 +24,6 @@ export class DocumentChunkRepository {
     await DocumentChunkModel.insertMany(
       chunks.map((chunk) => ({
         document: chunk.documentId,
-        user: chunk.userId,
         chunkIndex: chunk.chunkIndex,
         text: chunk.text,
         embedding: chunk.embedding,

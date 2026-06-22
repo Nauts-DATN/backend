@@ -134,7 +134,6 @@ export class RagService {
 
   async indexPdfDocument(input: {
     documentId: string;
-    userId: string;
     buffer: Buffer;
   }): Promise<IndexPdfResult> {
     if (!env.geminiApiKey) {
@@ -162,7 +161,6 @@ export class RagService {
       const embedding = await this.embedText(chunkText);
       records.push({
         documentId: input.documentId,
-        userId: input.userId,
         chunkIndex,
         text: chunkText,
         embedding,
