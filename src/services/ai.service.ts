@@ -277,6 +277,16 @@ export class AiService {
       );
     }
 
+    const existingQuizzes = await this.quizRepository.findAllByDocument(
+      doc._id.toString(),
+    );
+    const existingQuestions = existingQuizzes
+      .filter((quiz) => quiz.questionType === options.questionType)
+      .flatMap((quiz) => quiz.questions)
+      .map((question) => question.text?.trim())
+      .filter((text): text is string => Boolean(text))
+      .slice(0, 30);
+
     const ragContext = additionalPrompt
       ? await this.ragService.retrieve({
           documentId: doc._id.toString(),
@@ -303,6 +313,7 @@ export class AiService {
         {
           ...options,
           count: finalCount,
+          existingQuestions,
         },
         env.geminiApiKey,
       );
@@ -313,7 +324,10 @@ export class AiService {
       questions = await generateQuizFromPdf(
         buffer,
         doc.fileName,
-        options,
+        {
+          ...options,
+          existingQuestions,
+        },
         env.geminiApiKey,
       );
     }

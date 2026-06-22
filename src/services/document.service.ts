@@ -161,7 +161,6 @@ export class DocumentService {
         );
         const result = await this.ragService.indexPdfDocument({
           documentId: doc._id.toString(),
-          userId: input.uploadedBy,
           buffer: input.buffer,
         });
         if (result.skippedReason) {

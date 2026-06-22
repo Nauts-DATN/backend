@@ -39,8 +39,9 @@ export function buildQuizPrompt(
   count: number,
   questionType: "multiple_choice" | "essay",
   additionalPrompt?: string,
+  existingQuestions: string[] = [],
 ): string {
-  const additionalInstruction = additionalPrompt?.trim()
+  let additionalInstruction = additionalPrompt?.trim()
     ? `
 
 Yêu cầu bổ sung của người dùng:
@@ -48,6 +49,18 @@ ${additionalPrompt.trim()}
 
 Hãy ưu tiên yêu cầu bổ sung này khi chọn phạm vi nội dung để tạo câu hỏi. Nếu yêu cầu bổ sung mâu thuẫn với tài liệu, vẫn phải bám sát nội dung có trong tài liệu và không tự bịa thông tin.`
     : "";
+  const existingQuestionInstruction = existingQuestions.length
+    ? `
+
+CAC CAU HOI DA TON TAI CUA TAI LIEU NAY:
+${existingQuestions.map((q, index) => `${index + 1}. ${q}`).join("\n")}
+
+Yeu cau bat buoc de tranh trung lap:
+1. Khong tao lai cau hoi giong hoac gan giong cac cau hoi da ton tai o tren.
+2. Khong chi doi cach dien dat nhung giu nguyen y hoi.
+3. Hay uu tien khia canh, chi tiet, vi du hoac goc hoi khac trong tai lieu.`
+    : "";
+  additionalInstruction += existingQuestionInstruction;
 
   if (questionType === "multiple_choice") {
     const example = JSON.stringify(
