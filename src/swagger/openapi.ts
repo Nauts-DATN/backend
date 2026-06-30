@@ -738,7 +738,7 @@ export const openApiSpec = {
         tags: ["documents"],
         summary: "Upload document",
         description:
-          "Multipart `file` (tối đa **50 MB**) + `title` (bắt buộc) + `description`, `category`, `course` (tuỳ chọn). Cần Bearer token.",
+          "Multipart `file` (tối đa **15 MB**) + `title` (bắt buộc) + `description`, `category`, `course` (tuỳ chọn). Cần Bearer token.",
         operationId: "uploadDocument",
         security: [{ bearerAuth: [] }],
         requestBody: {

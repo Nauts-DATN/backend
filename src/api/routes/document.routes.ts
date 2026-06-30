@@ -7,7 +7,7 @@ import type { AuthMiddleware } from "../../middleware/auth.middleware.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
 });
 
 export function documentRoutes(
