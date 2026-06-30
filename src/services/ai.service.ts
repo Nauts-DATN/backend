@@ -148,12 +148,12 @@ export class AiService {
     ) {
       if (doc.ragStatus === "failed") {
         throw makeErr(
-          `Khong the dung RAG cho tai lieu nay: ${doc.ragError ?? "indexing failed"}`,
+          `Không thể dùng RAG cho tài liệu này: ${doc.ragError ?? "indexing failed"}`,
           422,
         );
       }
       throw makeErr(
-        "Tai lieu dang duoc xu ly noi dung. Vui long thu lai sau.",
+        "Tài liệu đang được xử lý nội dung. Vui lòng thử lại sau.",
         409,
       );
     }
@@ -169,7 +169,7 @@ export class AiService {
     if (ragContext) {
       if (!ragContext.isEnough) {
         throw makeErr(
-          "Noi dung tim thay khong du de tom tat chat luong cho yeu cau nay.",
+          "Nội dung tìm thấy không đủ để tóm tắt chất lượng cho yêu cầu này.",
           422,
         );
       }
@@ -267,12 +267,12 @@ export class AiService {
     ) {
       if (doc.ragStatus === "failed") {
         throw makeErr(
-          `Khong the dung RAG cho tai lieu nay: ${doc.ragError ?? "indexing failed"}`,
+          `Không thể dùng RAG cho tài liệu này: ${doc.ragError ?? "indexing failed"}`,
           422,
         );
       }
       throw makeErr(
-        "Tai lieu dang duoc xu ly noi dung. Vui long thu lai sau.",
+        "Tài liệu đang được xử lý nội dung. Vui lòng thử lại sau.",
         409,
       );
     }
@@ -297,7 +297,7 @@ export class AiService {
     if (ragContext) {
       if (!ragContext.isEnough || ragContext.suggestedQuestionCount < 1) {
         throw makeErr(
-          "Noi dung tim thay khong du de tao cau hoi chat luong cho yeu cau nay.",
+          "Nội dung tìm thấy không đủ để tạo câu hỏi chất lượng cho yêu cầu này.",
           422,
         );
       }
@@ -333,7 +333,7 @@ export class AiService {
     }
 
     if (questions.length === 0) {
-      throw makeErr("Khong tao duoc cau hoi phu hop voi yeu cau.", 422);
+      throw makeErr("Không tạo được câu hỏi phù hợp với yêu cầu.", 422);
     }
 
     const saved = await this.quizRepository.create({

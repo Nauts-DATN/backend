@@ -84,11 +84,11 @@ export async function summarizeFromContext(
     contents: [
       {
         parts: [
-          { text: `CONTEXT TRICH XUAT TU TAI LIEU:\n${contextText}` },
+          { text: `CONTEXT TRÍCH XUẤT TỪ TÀI LIỆU:\n${contextText}` },
           { text: buildSummarizePrompt(additionalPrompt) },
           {
             text:
-              "Chi tom tat dua tren CONTEXT o tren. Khong tom tat ngoai pham vi context. Neu context khong du thong tin, hay noi ro trong phan Tong quan va khong bia them.",
+              "Chỉ tóm tắt dựa trên CONTEXT ở trên. Không tóm tắt ngoài phạm vi context. Nếu context không đủ thông tin, hãy nói rõ trong phần Tổng quan và không bịa thêm.",
           },
         ],
       },
@@ -98,7 +98,7 @@ export async function summarizeFromContext(
   const text = response.text?.trim() ?? "";
   if (!text) {
     throw Object.assign(
-      new Error("Gemini khong tra ve noi dung tom tat tu context."),
+      new Error("Gemini không trả về nội dung tóm tắt từ context."),
       { status: 502 },
     );
   }

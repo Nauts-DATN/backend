@@ -70,7 +70,7 @@ function buildResponseSchema(questionType: QuestionType) {
           sourceChunkIds: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Danh sach chunk nguon neu cau hoi duoc tao tu RAG context",
+            description: "Danh sách chunk nguồn nếu câu hỏi được tạo từ RAG context",
           },
         },
         required: ["id", "type", "text", "options", "answer"],
@@ -104,7 +104,7 @@ function buildResponseSchema(questionType: QuestionType) {
         sourceChunkIds: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "Danh sach chunk nguon neu cau hoi duoc tao tu RAG context",
+          description: "Danh sách chunk nguồn nếu câu hỏi được tạo từ RAG context",
         },
       },
       required: ["id", "type", "text", "sampleAnswer"],
@@ -228,7 +228,7 @@ export async function generateQuizFromContext(
     contents: [
       {
         parts: [
-          { text: `CONTEXT TRICH XUAT TU TAI LIEU:\n${contextText}` },
+          { text: `CONTEXT TRÍCH XUẤT TỪ TÀI LIỆU:\n${contextText}` },
           {
             text: buildQuizPrompt(
               count,
@@ -239,7 +239,7 @@ export async function generateQuizFromContext(
           },
           {
             text:
-              "Chi tao cau hoi dua tren CONTEXT o tren. Moi cau hoi nen co sourceChunkIds voi gia tri dang chunk_<so>. Neu context khong du thong tin, chi tao so cau hoi that su co the tao va khong bia them.",
+              "Chỉ tạo câu hỏi dựa trên CONTEXT ở trên. Nếu context chứa nhiều phần khác nhau, chỉ dùng phần liên quan trực tiếp đến yêu cầu người dùng. Không dùng nội dung thuộc phần khác dù nằm trong cùng context. Nếu phần liên quan quá ít để tạo câu hỏi chất lượng, hãy tạo ít câu hơn hoặc trả về mảng JSON rỗng []. Không trả về giải thích ngoài JSON.",
           },
         ],
       },
@@ -252,16 +252,20 @@ export async function generateQuizFromContext(
 
   const raw = response.text?.trim() ?? "";
   if (!raw) {
-    throw Object.assign(new Error("Gemini khong tra ve du lieu quiz."), {
+    throw Object.assign(new Error("Gemini không trả về dữ liệu quiz."), {
       status: 502,
     });
   }
 
   const parsed = JSON.parse(raw) as QuizQuestion[];
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw Object.assign(new Error("Gemini tra ve quiz khong hop le."), {
+  if (!Array.isArray(parsed)) {
+    throw Object.assign(new Error("Gemini trả về quiz không hợp lệ."), {
       status: 502,
     });
+  }
+
+  if (parsed.length === 0) {
+    return [];
   }
 
   const seen = new Set<string>();
