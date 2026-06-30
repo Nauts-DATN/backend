@@ -7,10 +7,11 @@ import type {
   DocumentChunkRepository,
 } from "../repositories/document-chunk.repository.js";
 
-const CHUNK_SIZE = 1800;
-const CHUNK_OVERLAP = 250;
-const MIN_CONTEXT_CHARS = 900;
+const CHUNK_SIZE = 1500;
+const CHUNK_OVERLAP = 200;
+const MIN_CONTEXT_CHARS = 500;
 const DEFAULT_TOP_K = 8;
+const MIN_SIMILARITY_SCORE = 0.45;
 
 export type RetrievedContext = {
   chunks: Array<{
@@ -95,7 +96,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 function estimateQuestionCapacity(totalChars: number): number {
   if (totalChars < MIN_CONTEXT_CHARS) return 0;
-  return Math.max(1, Math.min(20, Math.floor(totalChars / 700)));
+  return Math.max(1, Math.min(20, Math.floor(totalChars / 500)));
 }
 
 export class RagService {
@@ -193,6 +194,7 @@ export class RagService {
         chunk,
         score: cosineSimilarity(queryEmbedding, chunk.embedding),
       }))
+      .filter(({ score }) => score >= MIN_SIMILARITY_SCORE)
       .sort((a, b) => b.score - a.score)
       .slice(0, input.topK ?? DEFAULT_TOP_K);
 
