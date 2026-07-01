@@ -50,6 +50,13 @@ ${additionalPrompt.trim()}
 Hãy ưu tiên yêu cầu bổ sung này khi chọn phạm vi nội dung để tạo câu hỏi. Nếu yêu cầu bổ sung mâu thuẫn với tài liệu, vẫn phải bám sát nội dung có trong tài liệu và không tự bịa thông tin.`
     : "";
 
+  if (additionalPrompt?.trim()) {
+    additionalInstruction += `
+
+Neu yeu cau bo sung khong lien quan den noi dung tai lieu, khong co trong tai lieu, hoac la chuoi vo nghia nhu "abc", "123", "asdef", hay tra ve JSON array rong [].
+Khong duoc bo qua yeu cau bo sung de tao cau hoi theo mot phan khac cua tai lieu.`;
+  }
+
   const existingQuestionInstruction = existingQuestions.length
     ? `
 

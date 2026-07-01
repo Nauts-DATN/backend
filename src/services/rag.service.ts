@@ -8,7 +8,7 @@ import type {
 } from "../repositories/document-chunk.repository.js";
 
 const CHUNK_SIZE = 1500;
-const CHUNK_OVERLAP = 200;
+const CHUNK_OVERLAP = 250;
 const MIN_CONTEXT_CHARS = 500;
 const DEFAULT_TOP_K = 8;
 const MIN_SIMILARITY_SCORE = 0.45;
@@ -99,6 +99,15 @@ function estimateQuestionCapacity(totalChars: number): number {
   return Math.max(1, Math.min(20, Math.floor(totalChars / 500)));
 }
 
+function normalizeRetrievalQuery(query: string): string {
+  return query
+    .replace(/\b(tao|tạo)\s+(cau hoi|câu hỏi|quiz|bai tap|bài tập)\s*(cho|ve|về)?/gi, " ")
+    .replace(/\b(tom tat|tóm tắt)\s*(cho|ve|về)?/gi, " ")
+    .replace(/\b(trac nghiem|trắc nghiệm|tu luan|tự luận)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export class RagService {
   constructor(documentChunkRepository: DocumentChunkRepository) {
     this.documentChunkRepository = documentChunkRepository;
@@ -180,7 +189,7 @@ export class RagService {
     query: string;
     topK?: number;
   }): Promise<RetrievedContext | null> {
-    const query = input.query.trim();
+    const query = normalizeRetrievalQuery(input.query.trim());
     if (!query || !env.geminiApiKey) return null;
 
     const chunks = await this.documentChunkRepository.findByDocument(
