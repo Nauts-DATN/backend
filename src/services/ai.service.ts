@@ -294,10 +294,17 @@ export class AiService {
         })
       : null;
 
+    if (additionalPrompt && doc.ragStatus === "completed" && !ragContext) {
+      throw makeErr(
+        "Không tìm thấy nội dung phù hợp trong tài liệu cho yêu cầu này.",
+        422,
+      );
+    }
+
     if (ragContext) {
       if (!ragContext.isEnough || ragContext.suggestedQuestionCount < 1) {
         throw makeErr(
-          "Nội dung tìm thấy không đủ để tạo câu hỏi chất lượng cho yêu cầu này.",
+          "Nội dung tìm thấy không đủ hoặc yêu cầu không đủ chi tiết.",
           422,
         );
       }
